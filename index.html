@@ -648,10 +648,34 @@
     </div>
   </div>
 
+  <!-- Modal de Confirmación para Borrar Pedido -->
+  <div id="delete-modal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-base font-black text-slate-900">¿Estás seguro?</h3>
+        <p class="text-xs text-rose-600 font-bold mt-1">No se puede deshacer este cambio.</p>
+        <p class="text-xs text-slate-500 mt-2">El pedido <span id="delete-order-id-label" class="font-black text-slate-800"></span> se borrará permanentemente de la base de datos.</p>
+      </div>
+      <div class="flex items-center gap-2 pt-2">
+        <button type="button" onclick="closeDeleteModal()" class="flex-1 py-2.5 px-4 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors">
+          Cancelar
+        </button>
+        <button type="button" onclick="confirmDeleteOrderAction()" class="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-rose-600/30 transition-all">
+          Sí, Borrar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // Configuración oficial de tu proyecto Firebase "envios-1e845"
     const firebaseConfig = {
@@ -683,17 +707,17 @@
           setupCloudListener();
           updateSyncBadge(true);
         } catch (authErr) {
-          console.warn("Autenticación Firebase en modo local:", authErr);
+          console.error("Autenticación Firebase falló:", authErr);
           isCloudReady = false;
-          updateSyncBadge(false);
+          updateSyncBadge(false, authErr.message || authErr.code);
           loadFromLocalFallback();
         }
       };
       initAuth();
     } catch (err) {
-      console.warn("Inicialización Firebase local:", err);
+      console.error("Inicialización Firebase local:", err);
       isCloudReady = false;
-      updateSyncBadge(false);
+      updateSyncBadge(false, err.message);
       loadFromLocalFallback();
     }
 
@@ -724,24 +748,29 @@
         updateCourierExportCounters();
       }, (err) => {
         console.error("Error al escuchar cambios en Firestore:", err);
-        updateSyncBadge(false);
+        updateSyncBadge(false, "Permisos Firestore bloqueados");
       });
     }
 
-    function updateSyncBadge(online) {
+    function updateSyncBadge(online, errorMsg = '') {
       const badge = document.getElementById('cloud-sync-status');
       if (!badge) return;
       if (online) {
         badge.className = "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 ml-1";
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Sincronizado`;
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Nube Conectada`;
+        badge.title = "Sincronización activa con Firebase";
       } else {
-        badge.className = "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 ml-1";
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Modo Local`;
+        badge.className = "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 ml-1 cursor-pointer";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Sin Conexión Nube`;
+        badge.title = errorMsg ? `Error: ${errorMsg}. Revisa Authentication y Reglas de Firestore.` : "Modo local";
       }
     }
 
     async function syncOrderToCloud(order) {
-      if (!isCloudReady || !db || !auth.currentUser) return;
+      if (!isCloudReady || !db || !auth.currentUser) {
+        console.warn("No se pudo sincronizar a la nube: Firebase no está autenticado");
+        return;
+      }
       try {
         const cleanDocId = order.id.replace(/[^a-zA-Z0-9_-]/g, '_');
         const docRef = doc(db, 'orders', cleanDocId);
@@ -749,13 +778,32 @@
           ...order,
           timestamp: order.timestamp || Date.now()
         }, { merge: true });
+        console.log(`Pedido ${order.id} sincronizado exitosamente en Firestore`);
       } catch (err) {
         console.error("Error al guardar en Firestore:", err);
+        showToast("⚠️ Error al sincronizar con la nube. Revisa consola.");
+      }
+    }
+
+    async function deleteOrderFromCloud(orderId) {
+      if (!isCloudReady || !db || !auth.currentUser) {
+        console.warn("Firebase no autenticado para eliminar");
+        return;
+      }
+      try {
+        const cleanDocId = orderId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const docRef = doc(db, 'orders', cleanDocId);
+        await deleteDoc(docRef);
+        console.log(`Pedido ${orderId} eliminado de Firestore`);
+      } catch (err) {
+        console.error("Error al eliminar pedido de Firestore:", err);
+        showToast("⚠️ Error al eliminar en la nube");
       }
     }
 
     // Exponer funciones globales para interacción con la UI
     window.getOrders = () => ordersCache;
+    window.deleteOrderFromCloud = deleteOrderFromCloud;
     window.saveOrders = (newOrders) => {
       ordersCache = newOrders;
       newOrders.forEach(o => syncOrderToCloud(o));
@@ -811,8 +859,8 @@
       }
     ];
 
-    // Helper para comprimir imágenes antes de guardarlas en la nube
-    function compressImage(file, maxWidth = 1000, quality = 0.72) {
+    // Helper para comprimir imágenes antes de guardarlas en la nube (optimizado a 650px / 0.55 calidad para evitar superar límites de Firestore)
+    function compressImage(file, maxWidth = 650, quality = 0.55) {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -1309,7 +1357,7 @@
       }
 
       return `
-        <div class="bg-white rounded-3xl border ${hasNotes ? 'border-amber-400 ring-2 ring-amber-200' : 'border-slate-200'} shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-3xl border ${hasNotes ? 'border-red-500 ring-2 ring-red-300' : 'border-slate-200'} shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
           <div>
             <div class="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <div>
@@ -1337,11 +1385,12 @@
             </div>
 
             ${hasNotes ? `
-              <div class="mx-4 mb-3 p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl">
-                <span class="text-xs font-extrabold text-amber-900 flex items-center gap-1">
-                  ⚠️ INDICACIÓN ESPECIAL / OJO:
-                </span>
-                <p class="text-xs text-amber-800 mt-0.5 font-medium whitespace-pre-line">${escapeHtml(order.notes)}</p>
+              <div class="mx-4 mb-3 p-3.5 bg-red-50 border-2 border-red-500 rounded-2xl shadow-sm">
+                <div class="flex items-center gap-1.5 text-xs font-black text-red-600 tracking-wide uppercase">
+                  <span class="text-base">🚨</span>
+                  <span>INDICACIÓN ESPECIAL / OJO:</span>
+                </div>
+                <p class="text-xs text-red-950 mt-1.5 font-bold whitespace-pre-line bg-white/90 p-2.5 rounded-xl border border-red-200 leading-relaxed">${escapeHtml(order.notes)}</p>
               </div>
             ` : ''}
 
@@ -1380,6 +1429,13 @@
                 <button onclick="updateOrderStatus('${order.id}', 'packed')" class="text-slate-500 hover:text-slate-800 text-[11px] font-normal underline">Deshacer</button>
               </div>
             `}
+
+            <button onclick="promptDeleteOrder('${order.id}')" class="w-full text-xs font-bold py-1.5 px-3 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Borrar Pedido
+            </button>
           </div>
         </div>
       `;
@@ -1862,6 +1918,52 @@ ${order.notes && order.notes.trim().length > 0 ? `\n⚠️ OJO: ${order.notes}` 
       const modal = document.getElementById('image-modal');
       modal.classList.add('hidden');
       modal.classList.remove('flex');
+    }
+
+    let pendingDeletionOrderId = null;
+
+    function promptDeleteOrder(orderId) {
+      pendingDeletionOrderId = orderId;
+      const label = document.getElementById('delete-order-id-label');
+      if (label) label.textContent = orderId;
+
+      const modal = document.getElementById('delete-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+    }
+
+    function closeDeleteModal() {
+      pendingDeletionOrderId = null;
+      const modal = document.getElementById('delete-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    async function confirmDeleteOrderAction() {
+      if (!pendingDeletionOrderId) return;
+      const targetId = pendingDeletionOrderId;
+      closeDeleteModal();
+
+      // Eliminar de Firebase en la nube
+      if (window.deleteOrderFromCloud) {
+        await window.deleteOrderFromCloud(targetId);
+      }
+
+      // Eliminar del estado local
+      const currentOrders = getOrders();
+      const updatedOrders = currentOrders.filter(o => o.id !== targetId);
+      if (window.saveOrders) {
+        window.saveOrders(updatedOrders);
+      }
+
+      renderOrders();
+      updatePendingCounter();
+      updateCourierExportCounters();
+      showToast(`🗑️ Pedido ${targetId} eliminado permanentemente`);
     }
 
     function showToast(msg) {
