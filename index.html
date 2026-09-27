@@ -1403,17 +1403,13 @@
           </div>
 
           <div class="p-4 bg-slate-50 border-t border-slate-100 space-y-2">
-            <div class="grid grid-cols-2 gap-2">
-              <button onclick="copyShippingLabel('${order.id}')" class="text-xs font-semibold py-2 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
-                📋 Copiar Rótulo
-              </button>
-              
+            <div>
               ${!isPacked && !isShipped ? `
-                <button onclick="updateOrderStatus('${order.id}', 'packed')" class="text-xs font-bold py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 shadow-sm transition-colors">
+                <button onclick="updateOrderStatus('${order.id}', 'packed')" class="w-full text-xs font-bold py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 shadow-sm transition-colors">
                   📦 Empacado
                 </button>
               ` : `
-                <button onclick="updateOrderStatus('${order.id}', 'pending')" class="text-xs font-semibold py-2 px-3 rounded-xl border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors">
+                <button onclick="updateOrderStatus('${order.id}', 'pending')" class="w-full text-xs font-semibold py-2 px-3 rounded-xl border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors">
                   ↩️ Deshacer
                 </button>
               `}
