@@ -47,24 +47,24 @@
       border-radius: 9999px;
     }
 
-    /* Reglas de Impresión A4 de 6 etiquetas (2 columnas x 3 filas) */
+    /* Reglas de Impresión A4 de 6 etiquetas (2 columnas x 3 filas optimizadas) */
     @page {
       size: A4 portrait;
-      margin: 6mm 6mm 6mm 6mm;
+      margin: 5mm 6mm 5mm 6mm;
     }
 
     .a4-print-sheet {
       width: 100%;
-      max-width: 198mm;
-      height: 285mm;
-      max-height: 285mm;
-      margin: 0 auto 12mm auto;
+      max-width: 200mm;
+      height: 282mm;
+      max-height: 282mm;
+      margin: 0 auto 8mm auto;
       background: white;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: repeat(3, 91mm);
+      grid-template-rows: repeat(4, 67mm);
       column-gap: 5mm;
-      row-gap: 4mm;
+      row-gap: 3mm;
       box-sizing: border-box;
       page-break-after: always;
       break-after: page;
@@ -74,21 +74,22 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      height: 90mm;
+      height: 67mm;
       box-sizing: border-box;
-      padding: 1mm;
+      padding: 0;
     }
 
-    /* Rótulo Estilo Shalom (altura compacta reducida a 68mm) */
+    /* Rótulo Estilo Shalom (altura compacta sin espacio sobrante idéntico a imagen de referencia) */
     .print-box-bordered {
-      border: 2.5px solid #000000;
-      border-radius: 14px;
-      padding: 6px 10px;
-      height: 68mm;
+      border: 2.8px solid #000000;
+      border-radius: 16px;
+      padding: 6px 11px;
+      height: 53mm;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 2px;
       background: #ffffff;
     }
 
@@ -143,21 +144,22 @@
       padding-left: 4px;
       font-size: 10px;
       font-weight: 800;
-      color: #0f172a;
-      line-height: 1.2;
+      color: #000000;
+      line-height: 1.25;
       text-transform: uppercase;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.1px;
     }
 
     .customer-data-text {
       font-family: 'Inter', system-ui, sans-serif;
-      font-size: 12.5px;
-      font-weight: 800;
+      font-size: 16px;
+      font-weight: 900;
       line-height: 1.22;
       color: #000000;
       white-space: pre-wrap;
       word-break: break-word;
       text-transform: uppercase;
+      letter-spacing: -0.1px;
     }
 
     /* Pantalla de Bloqueo por PIN */
@@ -1704,61 +1706,73 @@ ${order.notes && order.notes.trim().length > 0 ? `\n⚠️ OJO: ${order.notes}` 
       return lines[0].trim();
     }
 
+    // Limpia la línea redundante "📍 DESTINO" o "DESTINO:" para dejar directamente la ciudad/dirección
+    function sanitizeCustomerData(rawText) {
+      if (!rawText) return '';
+      const lines = rawText.split('\n');
+      const filtered = [];
+      for (let line of lines) {
+        const trimmed = line.trim();
+        if (/^(?:📍\s*)?destino\s*:?$/i.test(trimmed)) {
+          continue; // Omite la línea que solo dice DESTINO o 📍 DESTINO
+        }
+        const cleaned = trimmed.replace(/^(?:📍\s*)?destino\s*[:\-\.]\s*/i, '');
+        if (cleaned.length > 0) {
+          filtered.push(cleaned);
+        }
+      }
+      return filtered.join('\n');
+    }
+
     function getOfficialLogoSvg() {
       return `
-        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 3px; max-width: 130px;">
-          <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 0.88;">
-            <div style="display: flex; align-items: center; gap: 2px;">
-              <svg width="13" height="9" viewBox="0 0 15 10" style="display: block;">
-                <rect x="0" y="0" width="3" height="3" fill="#000" />
-                <rect x="6" y="0" width="3" height="3" fill="#000" />
-                <rect x="12" y="0" width="3" height="3" fill="#000" />
-                <rect x="3" y="3" width="3" height="3" fill="#000" />
-                <rect x="9" y="3" width="3" height="3" fill="#000" />
-                <rect x="0" y="6" width="3" height="3" fill="#000" />
-                <rect x="6" y="6" width="3" height="3" fill="#000" />
-                <rect x="12" y="6" width="3" height="3" fill="#000" />
-              </svg>
-              <span style="font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 7.5px; letter-spacing: -0.3px; color: #000000; text-transform: uppercase;">CARROS ESCALA</span>
-            </div>
-            <div style="font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 13.5px; font-style: italic; color: #E50914; letter-spacing: 0.4px; margin-top: 1px;">
-              PERU
-            </div>
-          </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; max-width: 145px; height: 38px; position: relative;">
+          <!-- Carga automática de tu imagen original logo.png si está en tu repositorio -->
+          <img src="logo.png" alt="Carros Escala Perú" style="display: none; max-height: 34px; max-width: 140px; object-fit: contain;" onload="this.style.display='block'; if(this.nextElementSibling) this.nextElementSibling.style.display='none';" />
 
-          <svg width="40" height="24" viewBox="0 0 100 50" fill="none" stroke="#000000" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin-left: -2px;">
-            <path d="M15 14 C 28 6, 42 6, 62 14" stroke-width="3.5" />
-            <path d="M62 14 C 68 17, 72 21, 74 25" stroke-width="3" />
-            <path d="M72 19 C 78 18, 80 22, 74 24" fill="#000" />
-            <path d="M74 25 C 64 25, 30 25, 20 25" stroke-width="2.6" />
-            <path d="M55 28 C 65 27, 72 31, 62 33 C 54 34, 52 30, 55 28 Z" fill="#000" />
-            <path d="M38 34 C 50 34, 60 38, 54 41 C 45 42, 42 35, 38 34" stroke-width="2.6" />
-            <path d="M12 43 L 64 43 C 74 43, 76 38, 76 35" stroke-width="3.2" />
-          </svg>
+          <!-- Silueta vectorial trazada idéntica a tu diseño original -->
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 0.88; text-align: right;">
+              <span style="font-family: 'Impact', 'Arial Black', 'Montserrat', sans-serif; font-style: italic; font-weight: 900; font-size: 11px; letter-spacing: -0.4px; color: #000000; text-transform: uppercase;">CARROS ESCALA</span>
+              <span style="font-family: 'Impact', 'Arial Black', 'Montserrat', sans-serif; font-style: italic; font-weight: 900; font-size: 18px; color: #E50914; letter-spacing: 0.6px; margin-top: -1px;">PERU</span>
+            </div>
+
+            <svg width="55" height="34" viewBox="0 0 130 75" fill="none" style="display: block; overflow: visible; margin-left: 2px;">
+              <!-- Líneas de velocidad superiores (capó) -->
+              <path d="M 45 15 C 65 14, 80 15, 92 16" stroke="#000000" stroke-width="3" stroke-linecap="round" />
+              <!-- Silueta techo, parabrisas y marco -->
+              <path d="M 28 24 C 55 23, 76 24, 88 25 C 99 26, 105 32, 112 43 C 114 46, 118 48, 122 48" stroke="#000000" stroke-width="3.6" stroke-linecap="round" />
+              <!-- Espejo retrovisor -->
+              <path d="M 112 40 C 117 38, 124 39, 124 43 C 124 47, 116 48, 111 44 Z" fill="#000000" />
+              <!-- Faros delanteros rasgados estilo moderno -->
+              <path d="M 94 56 C 108 55, 118 57, 117 62 C 112 65, 99 64, 94 56 Z" fill="#000000" />
+              <!-- Entrada de aire / parachoques -->
+              <path d="M 80 63 C 94 63, 103 66, 98 70 C 89 71, 81 67, 80 63 Z" fill="#000000" />
+              <!-- Borde inferior del parachoques con líneas de velocidad hacia la izquierda -->
+              <path d="M 122 48 C 125 54, 125 64, 124 71 C 123 75, 120 76, 113 76 L 15 76" stroke="#000000" stroke-width="4.2" stroke-linecap="round" />
+              <path d="M 2 70 L 98 70" stroke="#000000" stroke-width="3" stroke-linecap="round" />
+            </svg>
+          </div>
         </div>
       `;
     }
 
     function generateSingleShalomLabelHtml(order) {
       const clientName = extractCustomerName(order.rawCustomerData);
+      const cleanData = sanitizeCustomerData(order.rawCustomerData);
 
       return `
         <div class="print-label-item">
           <div class="print-box-bordered">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.2px solid #e2e8f0; padding-bottom: 2px;">
-              <div style="display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 10px; color: #000000; text-transform: uppercase;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 2px;">
+              <div style="display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 10px; color: #000000; text-transform: uppercase; letter-spacing: -0.2px;">
                 <span>📦 DATOS DEL DESTINATARIO</span>
               </div>
               ${getOfficialLogoSvg()}
             </div>
 
-            <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; padding: 2px 0;">
-              <div class="customer-data-text">${escapeHtml(order.rawCustomerData)}</div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1.2px solid #e2e8f0; padding-top: 2px; font-size: 10px; font-weight: 900; color: #000000;">
-              <span style="font-family: monospace; letter-spacing: 0.4px;">ID: ${order.id}</span>
-              <span style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; color: #000000;">${order.courier}</span>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 1px;">
+              <div class="customer-data-text">${escapeHtml(cleanData)}</div>
             </div>
           </div>
 
@@ -1816,11 +1830,11 @@ ${order.notes && order.notes.trim().length > 0 ? `\n⚠️ OJO: ${order.notes}` 
 
       document.getElementById('print-modal-icon').textContent = '🏷️';
       document.getElementById('print-modal-icon').className = 'bg-rose-600 text-white p-2 rounded-xl text-lg font-black';
-      document.getElementById('print-modal-title').textContent = courierName.toLowerCase() === 'shalom' ? 'Rótulos SHALOM & MOTORIZADO' : `Rótulos - ${courierName.toUpperCase()}`;
-      document.getElementById('print-modal-desc').textContent = 'Distribución estándar: 6 rótulos por página (2x3), tipografía grande y logo oficial.';
+      document.getElementById('print-modal-title').textContent = courierName.toLowerCase() === 'shalom' ? 'Rótulos SHALOM & MOTORIZADO (8 por Hoja)' : `Rótulos - ${courierName.toUpperCase()}`;
+      document.getElementById('print-modal-desc').textContent = 'Distribución optimizada: 8 rótulos por página (2x4), rectángulo ajustado sin espacios vacíos.';
       document.getElementById('print-modal-summary').textContent = `${targetOrders.length} pedido(s) listos`;
 
-      const labelsPerPage = 6;
+      const labelsPerPage = 8;
       const totalPages = Math.ceil(targetOrders.length / labelsPerPage);
       let sheetsHtml = '';
 
@@ -1835,6 +1849,50 @@ ${order.notes && order.notes.trim().length > 0 ? `\n⚠️ OJO: ${order.notes}` 
 
         sheetsHtml += `
           <div class="a4-print-sheet shadow-md mb-6 border border-slate-300">
+            ${labelsHtml}
+          </div>
+        `;
+      }
+
+      document.getElementById('print-preview-content').innerHTML = sheetsHtml;
+      document.getElementById('print-area-wrapper').innerHTML = sheetsHtml;
+
+      const modal = document.getElementById('print-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function openOlvaBatchPrintModal() {
+      const allOrders = getOrders();
+      const olvaOrders = allOrders.filter(o => o.courier === 'Olva' && o.status !== 'shipped');
+      const readyOrders = olvaOrders.filter(o => Boolean(o.olvaOfficialLabel));
+
+      if (readyOrders.length === 0) {
+        showToast('⚠️ No hay rótulos de Olva adjuntados con Ctrl+V aún.');
+        return;
+      }
+
+      document.getElementById('print-modal-icon').textContent = '🖨️';
+      document.getElementById('print-modal-icon').className = 'bg-amber-500 text-slate-950 p-2 rounded-xl text-lg font-black';
+      document.getElementById('print-modal-title').textContent = 'Rótulos Oficiales OLVA (6 por Hoja A4)';
+      document.getElementById('print-modal-desc').textContent = 'Organiza todas las capturas de Olva pegadas en cuadrícula de 6 por hoja con líneas de corte.';
+      document.getElementById('print-modal-summary').textContent = `${readyOrders.length} rótulo(s) de Olva listos`;
+
+      const labelsPerPage = 6;
+      const totalPages = Math.ceil(readyOrders.length / labelsPerPage);
+      let sheetsHtml = '';
+
+      for (let p = 0; p < totalPages; p++) {
+        const pageOrders = readyOrders.slice(p * labelsPerPage, (p + 1) * labelsPerPage);
+        let labelsHtml = pageOrders.map(order => generateSingleOlvaCaptureCardHtml(order)).join('');
+
+        const remainder = labelsPerPage - pageOrders.length;
+        for (let r = 0; r < remainder; r++) {
+          labelsHtml += `<div class="print-label-item-olva" style="visibility: hidden;"></div>`;
+        }
+
+        sheetsHtml += `
+          <div class="a4-print-sheet-olva shadow-md mb-6 border border-slate-300">
             ${labelsHtml}
           </div>
         `;
