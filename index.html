@@ -3,498 +3,679 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestor Logístico - Carros Escala Perú</title>
-  
-  <!-- Tailwind CSS -->
+  <title>Sistema de Despacho & Logística - Carros Escala Perú</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:ital,wght@0,800;0,900;1,900&display=swap" rel="stylesheet">
   
   <style>
+    /* Reglas base nativas para evitar roturas si el visor de WhatsApp bloquea el CDN de Tailwind */
+    *, ::before, ::after {
+      box-sizing: border-box;
+    }
     body {
-      background-color: #0f172a;
-      color: #f8fafc;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f1f5f9;
+      color: #1e293b;
     }
-
-    /* Modal Visor de Fotos */
-    .image-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: rgba(0, 0, 0, 0.9);
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
+    svg {
+      display: inline-block;
+      vertical-align: middle;
+      max-width: 100%;
     }
-    .image-modal.active {
-      display: flex;
+    .header-logo-icon {
+      width: 24px !important;
+      height: 24px !important;
+      min-width: 24px !important;
+      min-height: 24px !important;
     }
-
-    /* Contenedores de Impresión */
-    #print-container,
-    #report-print-container {
+    #toast {
       display: none;
     }
+    #toast.toast-show {
+      display: flex !important;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
 
-    /* Estilos de Impresión A4 */
+    /* Reglas de Impresión A4 de 8 etiquetas (2 columnas x 4 filas optimizadas) */
     @page {
       size: A4 portrait;
-      margin: 6mm 8mm 6mm 8mm;
+      margin: 5mm 6mm 5mm 6mm;
     }
 
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      
-      /* Modo Rótulos A4 */
-      body.printing-labels #print-container,
-      body.printing-labels #print-container * {
-        visibility: visible;
-      }
-      body.printing-labels #print-container {
-        display: block !important;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        background: white;
-      }
-
-      /* Modo Reporte PDF de Despacho */
-      body.printing-report #report-print-container,
-      body.printing-report #report-print-container * {
-        visibility: visible;
-      }
-      body.printing-report #report-print-container {
-        display: block !important;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        background: white;
-        color: #0f172a;
-      }
-
-      .page-break {
-        page-break-after: always;
-        break-after: page;
-      }
-    }
-
-    /* Cuadrícula de 8 Rótulos por Hoja A4 (2 columnas x 4 filas) */
-    .a4-sheet {
-      width: 194mm;
-      height: 284mm;
+    .a4-print-sheet {
+      width: 100%;
+      max-width: 200mm;
+      height: 282mm;
+      max-height: 282mm;
+      margin: 0 auto 8mm auto;
+      background: white;
       display: grid;
-      grid-template-columns: repeat(2, 94mm);
+      grid-template-columns: 1fr 1fr;
       grid-template-rows: repeat(4, 67mm);
-      gap: 3mm 6mm;
+      column-gap: 5mm;
+      row-gap: 3mm;
       box-sizing: border-box;
-      margin: 0 auto;
+      page-break-after: always;
+      break-after: page;
     }
 
-    .print-box-wrapper {
-      width: 94mm;
+    .print-label-item {
       display: flex;
       flex-direction: column;
+      justify-content: flex-start;
+      height: 67mm;
       box-sizing: border-box;
+      padding: 0;
     }
 
+    /* Rótulo Estilo Shalom (altura compacta sin espacio sobrante idéntico a imagen de referencia) */
     .print-box-bordered {
-      width: 100%;
+      border: 2.8px solid #000000;
+      border-radius: 16px;
+      padding: 6px 11px;
       height: 53mm;
-      border: 3.5px solid #000;
-      border-radius: 18px;
-      padding: 6px 10px;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      background: #fff;
-      color: #000;
+      gap: 2px;
+      background: #ffffff;
     }
 
-    .print-box-header {
+    /* Rótulo Estilo Olva (contenedor para captura de pantalla) */
+    .print-olva-capture-card {
+      border: 1.8px dashed #475569;
+      border-radius: 14px;
+      padding: 4px;
+      height: 89mm;
+      box-sizing: border-box;
       display: flex;
+      flex-direction: column;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2px;
+      background: #ffffff;
+      position: relative;
     }
 
-    .print-header-title {
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: 0.5px;
+    .print-olva-header {
       display: flex;
       align-items: center;
-      gap: 4px;
-      color: #000;
+      justify-content: space-between;
+      padding: 2px 6px;
+      border-bottom: 1px dashed #cbd5e1;
+      font-size: 10px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .print-olva-image-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 3px;
+      background: #fafafa;
+      border-radius: 8px;
+    }
+
+    .print-olva-image-wrapper img {
+      max-width: 100%;
+      max-height: 72mm;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .print-footer-info {
+      padding-top: 3px;
+      padding-left: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #000000;
+      line-height: 1.25;
+      text-transform: uppercase;
+      letter-spacing: 0.1px;
     }
 
     .customer-data-text {
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 16px;
       font-weight: 900;
       line-height: 1.22;
-      color: #000;
-      text-transform: uppercase;
+      color: #000000;
+      white-space: pre-wrap;
       word-break: break-word;
-      white-space: pre-line;
-      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: -0.1px;
     }
 
-    .print-label-meta {
-      margin-top: 2px;
-      padding: 0 4px;
-      font-size: 9.5px;
-      line-height: 1.2;
-      color: #000;
-      text-transform: uppercase;
+    /* Pantalla de Bloqueo por PIN */
+    #pin-lock-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .pin-circle {
+      width: 14px;
+      height: 14px;
+      border-radius: 9999px;
+      border: 2px solid #a5b4fc;
+      transition: all 0.2s;
+    }
+    .pin-circle.filled {
+      background-color: #6366f1;
+      transform: scale(1.15);
+      border-color: #818cf8;
+    }
+
+    /* Manejo de Impresión Nativa Limpia */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #print-area-wrapper, #print-area-wrapper * {
+        visibility: visible !important;
+      }
+      #print-area-wrapper {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .a4-print-sheet {
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 285mm !important;
+        max-height: 285mm !important;
+      }
     }
   </style>
 </head>
-<body class="min-h-screen">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
 
-  <!-- PANTALLA DE BLOQUEO POR PIN -->
-  <div id="pin-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1120] p-4">
-    <div class="w-full max-w-xs bg-slate-900/90 border border-slate-800 rounded-3xl p-6 text-center shadow-2xl backdrop-blur-xl">
-      <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-      </div>
-      <h2 class="text-xl font-bold text-white mb-1">Acceso Privado</h2>
-      <p class="text-xs text-slate-400 mb-6">Ingresa el PIN de seguridad de 4 dígitos</p>
-
-      <div class="flex justify-center gap-3 mb-6">
-        <div class="pin-dot w-3.5 h-3.5 rounded-full border border-slate-600"></div>
-        <div class="pin-dot w-3.5 h-3.5 rounded-full border border-slate-600"></div>
-        <div class="pin-dot w-3.5 h-3.5 rounded-full border border-slate-600"></div>
-        <div class="pin-dot w-3.5 h-3.5 rounded-full border border-slate-600"></div>
+  <div id="pin-lock-screen" class="no-print">
+    <div class="bg-white/10 backdrop-blur-xl border border-white/20 p-6 md:p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+      <div class="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-500/30">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
       </div>
 
-      <div class="grid grid-cols-3 gap-2.5 max-w-[220px] mx-auto text-lg font-bold">
-        <button onclick="pressPin('1')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">1</button>
-        <button onclick="pressPin('2')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">2</button>
-        <button onclick="pressPin('3')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">3</button>
-        <button onclick="pressPin('4')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">4</button>
-        <button onclick="pressPin('5')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">5</button>
-        <button onclick="pressPin('6')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">6</button>
-        <button onclick="pressPin('7')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">7</button>
-        <button onclick="pressPin('8')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">8</button>
-        <button onclick="pressPin('9')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">9</button>
-        <button onclick="clearPin()" class="h-12 rounded-xl bg-slate-800/40 text-slate-400 text-xs font-semibold hover:bg-slate-800">Borrar</button>
-        <button onclick="pressPin('0')" class="h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-white transition">0</button>
-        <button onclick="backspacePin()" class="h-12 rounded-xl bg-slate-800/40 text-slate-400 hover:bg-slate-800 flex items-center justify-center">⌫</button>
-      </div>
-    </div>
-  </div>
+      <h2 class="text-white text-lg font-black tracking-tight">Acceso Privado</h2>
+      <p class="text-indigo-200 text-xs mb-5">Ingresa el PIN de seguridad de 4 dígitos</p>
 
-  <!-- APLICACIÓN PRINCIPAL -->
-  <div id="app" class="hidden">
-    <!-- BARRA SUPERIOR -->
-    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30 px-4 py-3">
-      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">🏎️</span>
-          <div>
-            <h1 class="text-base font-extrabold text-white tracking-wide leading-none">Carros Escala Perú</h1>
-            <p class="text-[11px] text-slate-400 font-medium">Logística & Envíos en Nube</p>
-          </div>
-        </div>
-
-        <!-- Pestañas de Navegación -->
-        <div class="flex items-center gap-1.5 bg-slate-800/80 p-1 rounded-2xl border border-slate-700/60">
-          <button id="nav-orders-btn" onclick="switchView('orders')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition bg-indigo-600 text-white">
-            📋 Panel de Pedidos
-          </button>
-          <button id="nav-dispatch-btn" onclick="switchView('dispatch')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white">
-            📦 Modo Despacho (<span id="pending-dispatch-badge">0</span>)
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <span id="cloud-status" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800/50 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Nube Conectada
-          </span>
-
-          <button onclick="openNewOrderModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-lg shadow-indigo-600/20 active:scale-95 transition flex items-center gap-1.5">
-            <span>➕</span> Nuevo Pedido
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto p-4 space-y-4">
-      <!-- VISTA 1: PANEL DE PEDIDOS (ADMIN) -->
-      <section id="view-orders" class="space-y-4">
-        <!-- Estadísticas Rápidas -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
-            <p class="text-[11px] font-semibold text-slate-400">Total Pedidos</p>
-            <p id="stat-total" class="text-xl font-black text-white mt-0.5">0</p>
-          </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
-            <p class="text-[11px] font-semibold text-amber-400">Pendientes Despacho</p>
-            <p id="stat-pending" class="text-xl font-black text-amber-400 mt-0.5">0</p>
-          </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
-            <p class="text-[11px] font-semibold text-emerald-400">Empacados</p>
-            <p id="stat-packed" class="text-xl font-black text-emerald-400 mt-0.5">0</p>
-          </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
-            <p class="text-[11px] font-semibold text-indigo-400">Shalom Pendientes</p>
-            <p id="stat-shalom" class="text-xl font-black text-indigo-400 mt-0.5">0</p>
-          </div>
-        </div>
-
-        <!-- Filtros y Botones de Impresión -->
-        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
-          <div class="flex flex-wrap items-center gap-2">
-            <input type="text" id="search-input" oninput="filterOrdersTable()" placeholder="Buscar cliente, DNI, producto o ID..." class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 w-64">
-            
-            <select id="filter-agency" onchange="filterOrdersTable()" class="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none">
-              <option value="ALL">Todas las Agencias</option>
-              <option value="SHALOM">Shalom</option>
-              <option value="OLVA">Olva Courier</option>
-              <option value="MOTORIZADO">Motorizado Lima</option>
-            </select>
-
-            <select id="filter-status" onchange="filterOrdersTable()" class="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none">
-              <option value="ALL">Todos los Estados</option>
-              <option value="PENDING">Pendientes</option>
-              <option value="PACKED">Empacados</option>
-            </select>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="openPrintModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
-              <span>🏷️</span> Imprimir Rótulos (A4)
-            </button>
-            <button onclick="handleCleanDispatched()" class="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
-              <span>🧹</span> Limpiar Despachados
-            </button>
-          </div>
-        </div>
-
-        <!-- Tabla de Pedidos -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-slate-800/80 text-slate-400 font-semibold border-b border-slate-700/80">
-                <tr>
-                  <th class="p-3">ID / Cliente</th>
-                  <th class="p-3">Agencia</th>
-                  <th class="p-3">Producto</th>
-                  <th class="p-3">Datos de Envío</th>
-                  <th class="p-3">Estado</th>
-                  <th class="p-3 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="orders-table-body" class="divide-y divide-slate-800/60 font-medium">
-                <!-- Filas dinámicas -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- VISTA 2: MODO DESPACHO (CELULAR / LOGÍSTICA) -->
-      <section id="view-dispatch" class="hidden space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Cola de Empaque</span>
-            <span id="pending-counter" class="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button onclick="openPrintModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
-              <span>🏷️</span> Rótulos Shalom (A4)
-            </button>
-            <button onclick="handleCleanDispatched()" class="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
-              <span>🧹</span> Limpiar Despachados
-            </button>
-          </div>
-        </div>
-
-        <div id="dispatch-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Tarjetas renderizadas dinámicamente -->
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- MODAL: NUEVO / EDITAR PEDIDO -->
-  <div id="new-order-modal" class="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 id="modal-order-title" class="text-base font-bold text-white flex items-center gap-2">📦 Crear Pedido</h3>
-        <button onclick="toggleModal('new-order-modal')" class="text-slate-400 hover:text-white text-lg">✕</button>
+      <!-- Indicadores de dígitos -->
+      <div class="flex justify-center items-center gap-3 mb-6">
+        <div id="pin-dot-1" class="pin-circle"></div>
+        <div id="pin-dot-2" class="pin-circle"></div>
+        <div id="pin-dot-3" class="pin-circle"></div>
+        <div id="pin-dot-4" class="pin-circle"></div>
       </div>
 
-      <input type="hidden" id="edit-order-id" value="">
-
-      <div class="space-y-3 text-xs">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-slate-300 font-semibold mb-1">ID / Usuario (Instagram / Celular)</label>
-            <input type="text" id="order-id-input" placeholder="@usuario o +51..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
-          </div>
-          <div>
-            <label class="block text-slate-300 font-semibold mb-1">Agencia de Envío</label>
-            <select id="order-agency-input" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
-              <option value="SHALOM">Shalom</option>
-              <option value="OLVA">Olva Courier</option>
-              <option value="MOTORIZADO">Motorizado Lima</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-slate-300 font-semibold mb-1">Producto(s) a despachar</label>
-          <input type="text" id="order-product-input" placeholder="Ej: Red Bull 1/43 RB19..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
-        </div>
-
-        <div>
-          <label class="block text-slate-300 font-semibold mb-1">Datos para el Rótulo (Nombre, DNI, Celular, Destino)</label>
-          <textarea id="order-data-input" rows="4" placeholder="JUAN PEREZ&#10;DNI: 70809010&#10;999888777&#10;SHALOM PIURA" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500"></textarea>
-        </div>
-
-        <div>
-          <label class="block text-red-400 font-bold mb-1">🚨 Indicación Especial / Ojo (Opcional)</label>
-          <input type="text" id="order-note-input" placeholder="Ej: Empacar con doble burbuja, coordinar antes de las 3pm, etc." class="w-full bg-slate-800 border border-red-500/50 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-red-500">
-        </div>
+      <div id="pin-error-msg" class="text-rose-400 text-xs font-semibold mb-3 hidden">
+        PIN incorrecto. Intenta de nuevo.
       </div>
 
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="toggleModal('new-order-modal')" class="px-4 py-2 rounded-xl text-slate-400 hover:text-white font-semibold text-xs">Cancelar</button>
-        <button onclick="saveOrderData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30">Guardar Pedido</button>
+      <!-- Teclado Numérico -->
+      <div class="grid grid-cols-3 gap-2.5 max-w-[240px] mx-auto">
+        <button type="button" onclick="handlePinKey('1')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">1</button>
+        <button type="button" onclick="handlePinKey('2')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">2</button>
+        <button type="button" onclick="handlePinKey('3')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">3</button>
+        <button type="button" onclick="handlePinKey('4')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">4</button>
+        <button type="button" onclick="handlePinKey('5')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">5</button>
+        <button type="button" onclick="handlePinKey('6')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">6</button>
+        <button type="button" onclick="handlePinKey('7')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">7</button>
+        <button type="button" onclick="handlePinKey('8')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">8</button>
+        <button type="button" onclick="handlePinKey('9')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">9</button>
+        <button type="button" onclick="clearPinEntry()" class="h-12 text-slate-400 hover:text-white text-xs font-semibold rounded-2xl transition-colors">Borrar</button>
+        <button type="button" onclick="handlePinKey('0')" class="h-12 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-lg rounded-2xl transition-all">0</button>
+        <button type="button" onclick="deleteLastPinDigit()" class="h-12 text-slate-400 hover:text-white flex items-center justify-center rounded-2xl transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: CONFIRMAR BORRADO -->
-  <div id="delete-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-6 text-center space-y-4 shadow-2xl">
-      <div class="w-12 h-12 mx-auto rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl font-bold">🗑️</div>
-      <div>
-        <h4 class="text-base font-bold text-white mb-1">¿Estás seguro?</h4>
-        <p class="text-xs text-slate-400">No se puede deshacer este cambio. El pedido se eliminará definitivamente de la base de datos.</p>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="closeDeleteModal()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold">Cancelar</button>
-        <button id="confirm-delete-btn" class="w-1/2 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30">Sí, Borrar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: VISOR DE FOTO A PANTALLA COMPLETA -->
-  <div id="image-viewer-modal" class="image-modal" onclick="closeImageViewer()">
-    <div class="relative max-w-3xl max-h-[90vh] p-2" onclick="event.stopPropagation()">
-      <button onclick="closeImageViewer()" class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-800 text-white font-bold flex items-center justify-center border border-slate-600 shadow-lg">✕</button>
-      <img id="full-screen-image" src="" alt="Foto de paquete" class="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-slate-700">
-    </div>
-  </div>
-
-  <!-- CONTENEDORES OCULTOS DE IMPRESIÓN -->
-  <div id="print-container"></div>
-  <div id="report-print-container"></div>
-
-  <!-- SCRIPT DEL PIN (INDIVIDUAL E INMEDIATO) -->
+  <!-- SCRIPT INDEPENDIENTE PARA EL PIN -->
   <script>
-    const CORRECT_PIN = "9347";
+    const PIN_SECRET = "9347";
     let enteredPin = "";
 
-    function updatePinDots() {
-      const dots = document.querySelectorAll('.pin-dot');
-      dots.forEach((dot, index) => {
-        if (index < enteredPin.length) {
-          dot.classList.add('bg-indigo-500', 'border-indigo-400');
-        } else {
-          dot.classList.remove('bg-indigo-500', 'border-indigo-400');
-        }
-      });
+    if (sessionStorage.getItem('despacho_pin_auth') === 'true') {
+      const lockScreen = document.getElementById('pin-lock-screen');
+      if (lockScreen) lockScreen.style.display = 'none';
     }
 
-    function pressPin(num) {
+    function handlePinKey(num) {
       if (enteredPin.length < 4) {
-        enteredPin += num;
+        enteredPin += String(num);
         updatePinDots();
         if (enteredPin.length === 4) {
-          setTimeout(validatePin, 100);
+          setTimeout(verifyPin, 100);
         }
       }
     }
 
-    function clearPin() {
-      enteredPin = "";
-      updatePinDots();
-    }
-
-    function backspacePin() {
+    function deleteLastPinDigit() {
       enteredPin = enteredPin.slice(0, -1);
       updatePinDots();
+      const err = document.getElementById('pin-error-msg');
+      if (err) err.classList.add('hidden');
     }
 
-    function validatePin() {
-      if (enteredPin === CORRECT_PIN) {
-        document.getElementById('pin-screen').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
-        sessionStorage.setItem('unlocked', 'true');
+    function clearPinEntry() {
+      enteredPin = "";
+      updatePinDots();
+      const err = document.getElementById('pin-error-msg');
+      if (err) err.classList.add('hidden');
+    }
+
+    function updatePinDots() {
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('pin-dot-' + i);
+        if (dot) {
+          if (i <= enteredPin.length) {
+            dot.classList.add('filled');
+          } else {
+            dot.classList.remove('filled');
+          }
+        }
+      }
+    }
+
+    function verifyPin() {
+      if (enteredPin === PIN_SECRET) {
+        sessionStorage.setItem('despacho_pin_auth', 'true');
+        const lockScreen = document.getElementById('pin-lock-screen');
+        if (lockScreen) lockScreen.style.display = 'none';
+        if (typeof showToast === 'function') {
+          showToast('🔓 Acceso concedido');
+        }
       } else {
-        alert('PIN Incorrecto');
-        clearPin();
+        const errMsg = document.getElementById('pin-error-msg');
+        if (errMsg) errMsg.classList.remove('hidden');
+        setTimeout(() => {
+          clearPinEntry();
+        }, 600);
       }
     }
 
     window.addEventListener('keydown', (e) => {
-      if (sessionStorage.getItem('unlocked') === 'true') return;
-      if (e.key >= '0' && e.key <= '9') pressPin(e.key);
-      if (e.key === 'Backspace') backspacePin();
-      if (e.key === 'Escape') clearPin();
+      const lockScreen = document.getElementById('pin-lock-screen');
+      if (!lockScreen || lockScreen.style.display === 'none') return;
+
+      if (e.key >= '0' && e.key <= '9') {
+        handlePinKey(e.key);
+      } else if (e.key === 'Backspace') {
+        deleteLastPinDigit();
+      } else if (e.key === 'Escape' || e.key === 'Delete') {
+        clearPinEntry();
+      }
     });
 
-    if (sessionStorage.getItem('unlocked') === 'true') {
-      document.getElementById('pin-screen').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
-    }
-
-    function switchView(view) {
-      const viewOrders = document.getElementById('view-orders');
-      const viewDispatch = document.getElementById('view-dispatch');
-      const btnOrders = document.getElementById('nav-orders-btn');
-      const btnDispatch = document.getElementById('nav-dispatch-btn');
-
-      if (view === 'orders') {
-        viewOrders.classList.remove('hidden');
-        viewDispatch.classList.add('hidden');
-        btnOrders.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition bg-indigo-600 text-white";
-        btnDispatch.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white";
-      } else {
-        viewOrders.classList.add('hidden');
-        viewDispatch.classList.remove('hidden');
-        btnOrders.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white";
-        btnDispatch.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition bg-indigo-600 text-white";
-      }
-    }
-
-    function openImageViewer(src) {
-      document.getElementById('full-screen-image').src = src;
-      document.getElementById('image-viewer-modal').classList.add('active');
-    }
-
-    function closeImageViewer() {
-      document.getElementById('image-viewer-modal').classList.remove('active');
-    }
+    window.handlePinKey = handlePinKey;
+    window.deleteLastPinDigit = deleteLastPinDigit;
+    window.clearPinEntry = clearPinEntry;
   </script>
 
-  <!-- FIREBASE Y LÓGICA PRINCIPAL -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-    import { 
-      getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="bg-slate-950 text-white p-2 rounded-xl shadow-md flex items-center justify-center" style="width: 40px; height: 40px; min-width: 40px;">
+          <svg class="header-logo-icon text-rose-500" width="24" height="24" fill="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
+            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5 leading-tight">
+            <span class="font-black text-sm tracking-tight text-slate-900">CARROS ESCALA</span>
+            <span class="font-black text-sm italic text-red-600">PERÚ</span>
+            <span id="cloud-sync-status" class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 ml-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              En línea
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">Módulo de Ventas & Despacho Logístico</p>
+        </div>
+      </div>
 
+      <!-- Selector de Modo -->
+      <div class="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+        <button id="btn-tab-seller" onclick="switchView('seller')" class="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 bg-white text-indigo-700 shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Registrar Pedido
+        </button>
+        <button id="btn-tab-logistics" onclick="switchView('logistics')" class="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 text-slate-600 hover:text-slate-900">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <span>Modo Despacho</span>
+          <span id="badge-pending-count" class="ml-1 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6 no-print">
+    
+    <!-- Notificación Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-24 opacity-0 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 pointer-events-none">
+      <span id="toast-icon">✅</span>
+      <span id="toast-message" class="text-sm font-medium">Acción completada</span>
+    </div>
+
+    <section id="view-seller" class="block">
+      <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 px-6 py-4 text-white flex justify-between items-center">
+          <div>
+            <span class="text-xs uppercase tracking-wider text-rose-400 font-bold">Módulo de Venta</span>
+            <h2 class="text-xl font-bold">Registrar Pedido para Envío</h2>
+          </div>
+        </div>
+
+        <form id="order-form" onsubmit="handleFormSubmit(event)" class="p-6 md:p-8 space-y-6">
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">ID de Pedido</label>
+              <div class="relative">
+                <input type="text" id="order-id" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-black text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-base">
+                <button type="button" onclick="generateNewOrderId()" title="Generar nuevo ID" class="absolute right-2.5 top-2.5 text-xs text-slate-500 hover:text-indigo-600 font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 shadow-sm">
+                  🔄 Nuevo
+                </button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">Fecha y Hora</label>
+              <input type="text" id="order-date" readonly class="w-full bg-slate-100 border border-slate-200 text-slate-500 rounded-xl px-3.5 py-2.5 text-sm cursor-not-allowed">
+            </div>
+          </div>
+
+          <!-- Zona de Subida de Fotos múltiples -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                Fotos o Capturas del Producto <span class="text-rose-500">*</span>
+              </label>
+              <span id="photo-count-badge" class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                0 fotos añadidas
+              </span>
+            </div>
+            
+            <div id="dropzone" tabindex="0" class="relative group border-2 border-dashed border-indigo-200 hover:border-indigo-400 focus:border-indigo-500 bg-indigo-50/40 hover:bg-indigo-50/70 rounded-2xl p-4 text-center transition-all cursor-pointer outline-none">
+              <input type="file" id="image-file-input" accept="image/*" multiple class="hidden" onchange="handleFileSelect(event)">
+              
+              <div class="py-1">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto mb-1.5 shadow-sm border border-indigo-100 text-indigo-600 group-hover:scale-105 transition-transform">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <p class="text-sm font-semibold text-slate-800">
+                  Pega la captura
+                </p>
+              </div>
+            </div>
+
+            <!-- Miniaturas -->
+            <div id="thumbnails-container" class="hidden mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-3"></div>
+          </div>
+
+          <!-- Descripción del artículo -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+              Producto <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="product-desc" required placeholder="Ej. Nissan Skyline GT-R R34 Azul 1:24" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+
+          <!-- Casilla Única de Datos del Destinatario -->
+          <div class="border-t border-slate-200 pt-5 space-y-2">
+            <label for="client-raw-data" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+              Datos del Destinatario <span class="text-rose-500">*</span>
+            </label>
+            <textarea id="client-raw-data" required rows="4" placeholder="NOMBRE: BERECHE CABRALES XIMENA SAMAÍ&#10;DNI: 61047570&#10;CEL: 904735702&#10;📍 DESTINO&#10;CHULUCANAS HUANCAVELICA" class="w-full border border-slate-300 rounded-2xl p-4 text-sm font-mono text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors leading-relaxed"></textarea>
+          </div>
+
+          <!-- Selector de Courier y Anotaciones -->
+          <div class="border-t border-slate-200 pt-5 space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+                Método de Envío / Courier <span class="text-rose-500">*</span>
+              </label>
+              <div class="grid grid-cols-3 gap-3" id="courier-selector">
+                <label class="relative flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 border-slate-200 cursor-pointer hover:border-slate-300 transition-all select-none">
+                  <input type="radio" name="courier" value="Shalom" checked class="peer sr-only">
+                  <div class="w-3.5 h-3.5 rounded-full bg-slate-300 peer-checked:bg-rose-600 mb-1"></div>
+                  <span class="font-black text-sm text-slate-900 tracking-wide">SHALOM</span>
+                  <span class="text-[11px] text-slate-400">Agencia</span>
+                  <div class="absolute inset-0 rounded-2xl border-2 border-transparent peer-checked:border-rose-600 peer-checked:bg-rose-50/40 pointer-events-none"></div>
+                </label>
+
+                <label class="relative flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 border-slate-200 cursor-pointer hover:border-slate-300 transition-all select-none">
+                  <input type="radio" name="courier" value="Olva" class="peer sr-only">
+                  <div class="w-3.5 h-3.5 rounded-full bg-slate-300 peer-checked:bg-amber-500 mb-1"></div>
+                  <span class="font-black text-sm text-slate-900 tracking-wide">OLVA</span>
+                  <span class="text-[11px] text-slate-400">Courier</span>
+                  <div class="absolute inset-0 rounded-2xl border-2 border-transparent peer-checked:border-amber-500 peer-checked:bg-amber-50/40 pointer-events-none"></div>
+                </label>
+
+                <label class="relative flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 border-slate-200 cursor-pointer hover:border-slate-300 transition-all select-none">
+                  <input type="radio" name="courier" value="Motorizado" class="peer sr-only">
+                  <div class="w-3.5 h-3.5 rounded-full bg-slate-300 peer-checked:bg-emerald-600 mb-1"></div>
+                  <span class="font-black text-sm text-slate-900 tracking-wide">MOTORIZADO</span>
+                  <span class="text-[11px] text-slate-400">Express Local</span>
+                  <div class="absolute inset-0 rounded-2xl border-2 border-transparent peer-checked:border-emerald-600 peer-checked:bg-emerald-50/40 pointer-events-none"></div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Anotaciones -->
+            <div id="notes-container" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 transition-colors">
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="order-notes" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Anotaciones
+                </label>
+              </div>
+              <textarea id="order-notes" rows="2" oninput="handleNotesInput(this)" placeholder="Ej. Doble burbuja / Enviar sin caja original / Cambio de color..." class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base transition-all">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Guardar y Pasar a Logística
+          </button>
+        </form>
+
+      </div>
+    </section>
+
+    <section id="view-logistics" class="hidden space-y-6">
+      <!-- Barra de herramientas de Despacho -->
+      <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Despacho</h2>
+        </div>
+
+        <!-- Botones de Acción de Courier y Reportes A4 -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Botón Rótulos Shalom -->
+          <button onclick="openPrintModal('Shalom')" class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 active:scale-95 text-white shadow-md shadow-rose-600/20 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>Rótulos SHALOM</span>
+            <span id="badge-count-shalom" class="bg-rose-900 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold">0</span>
+          </button>
+
+          <!-- Botón Impresión Masiva Rótulos Oficiales Olva -->
+          <button onclick="openOlvaBatchPrintModal()" class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 active:scale-95 text-amber-400 border border-amber-400/40 shadow-md transition-all">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <span>🖨️ Rótulos OLVA</span>
+            <span id="badge-count-olva-ready" class="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-md font-black">0</span>
+          </button>
+
+          <!-- Botón Inteligente Olva: Filtra y Redirige al Registro Oficial -->
+          <button onclick="handleOlvaCourierWorkflow()" class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 shadow-md shadow-amber-500/20 transition-all">
+            <span>Ir a Olva Courier</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            <span id="badge-count-olva" class="bg-amber-900 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold">0</span>
+          </button>
+
+          <!-- Filtros de vista -->
+          <div class="h-6 w-[1px] bg-slate-200 hidden sm:block mx-1"></div>
+          <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-sm transition-all">Todos</button>
+          <button onclick="setFilter('courier_shalom')" id="filter-courier_shalom" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Shalom</button>
+          <button onclick="setFilter('courier_olva')" id="filter-courier_olva" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Olva</button>
+          <button onclick="setFilter('pending')" id="filter-pending" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Por Empacar</button>
+          <button onclick="setFilter('packed')" id="filter-packed" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Empacados</button>
+          
+          <button onclick="clearCompletedOrders()" class="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 ml-auto">
+            Limpiar despachados
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuadrícula de Tarjetas de Despacho -->
+      <div id="orders-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+      <!-- Estado Vacío -->
+      <div id="empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200 p-8">
+        <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-slate-800">No hay pedidos con el filtro actual</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Selecciona "Todos" o registra nuevos pedidos desde el panel de venta.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="print-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex-col justify-between p-2 md:p-6 overflow-y-auto no-print">
+    <div class="max-w-4xl w-full mx-auto bg-white rounded-3xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden my-auto">
+      
+      <!-- Barra superior del modal -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div id="print-modal-icon" class="bg-rose-600 text-white p-2 rounded-xl text-lg font-black">🏷️</div>
+          <div>
+            <h3 id="print-modal-title" class="text-base font-bold tracking-tight">Rótulos A4 para Imprimir / Guardar en PDF</h3>
+            <p id="print-modal-desc" class="text-xs text-slate-400">Distribución optimizada: 8 rótulos por página (2x4).</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="triggerDirectBrowserPrint()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>Imprimir / Guardar PDF</span>
+          </button>
+          
+          <button onclick="closePrintModal()" class="text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-xl transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sugerencia de configuración -->
+      <div class="bg-amber-50 border-b border-amber-200 px-6 py-2 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2">
+        <span>💡 <b>Configuración:</b> Destino: <b>Guardar como PDF</b> o tu impresora, <b>Márgenes: Ninguno / Predeterminado</b>, Escala 100%.</span>
+        <span id="print-modal-summary" class="font-extrabold bg-amber-200/80 px-2 py-0.5 rounded-md text-amber-950">0 pedidos</span>
+      </div>
+
+      <!-- Contenedor scrolleable con previsualización A4 -->
+      <div class="p-4 md:p-6 overflow-y-auto bg-slate-200 flex-grow flex justify-center custom-scrollbar">
+        <div id="print-preview-content" class="bg-white shadow-xl rounded-xl p-4 w-full max-w-[210mm]"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR EXCLUSIVO PARA IMPRESIÓN DIRECTA NATIVA (@media print) -->
+  <div id="print-area-wrapper"></div>
+
+  <!-- Modal para ver imágenes en pantalla completa -->
+  <div id="image-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4 no-print" onclick="closeImageModal()">
+    <div class="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl p-2" onclick="event.stopPropagation()">
+      <button onclick="closeImageModal()" class="absolute top-4 right-4 bg-black/70 text-white rounded-full p-2 hover:bg-black transition-colors z-10">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <img id="modal-image" src="" alt="Vista ampliada" class="max-h-[85vh] w-auto mx-auto object-contain rounded-xl">
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación para Borrar Pedido -->
+  <div id="delete-modal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-base font-black text-slate-900">¿Estás seguro?</h3>
+        <p class="text-xs text-rose-600 font-bold mt-1">No se puede deshacer este cambio.</p>
+        <p class="text-xs text-slate-500 mt-2">El pedido <span id="delete-order-id-label" class="font-black text-slate-800"></span> se borrará permanentemente de la base de datos.</p>
+      </div>
+      <div class="flex items-center gap-2 pt-2">
+        <button type="button" onclick="closeDeleteModal()" class="flex-1 py-2.5 px-4 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors">
+          Cancelar
+        </button>
+        <button type="button" onclick="confirmDeleteOrderAction()" class="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-rose-600/30 transition-all">
+          Sí, Borrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Configuración oficial de tu proyecto Firebase "envios-1e845"
     const firebaseConfig = {
       apiKey: "AIzaSyDEhWffvRTicQwkna_juO_8MASorZ6MMK8",
       authDomain: "envios-1e845.firebaseapp.com",
@@ -505,496 +686,1265 @@
       measurementId: "G-VPSF9CLQSZ"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
+    let app = null;
+    let auth = null;
+    let db = null;
+    let isCloudReady = false;
     let ordersCache = [];
-    let pendingDeleteId = null;
 
-    // Login anónimo
-    signInAnonymously(auth).catch(err => {
-      console.warn("Auth warning:", err);
-      const status = document.getElementById('cloud-status');
-      if (status) {
-        status.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950 text-amber-300 border border-amber-800/50";
-        status.innerText = "⚠️ Modo Local";
+    // Inicializar Firebase
+    try {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+
+      const initAuth = async () => {
+        try {
+          await signInAnonymously(auth);
+          isCloudReady = true;
+          setupCloudListener();
+          updateSyncBadge(true);
+        } catch (authErr) {
+          console.error("Autenticación Firebase falló:", authErr);
+          isCloudReady = false;
+          updateSyncBadge(false, authErr.message || authErr.code);
+          loadFromLocalFallback();
+        }
+      };
+      initAuth();
+    } catch (err) {
+      console.error("Inicialización Firebase local:", err);
+      isCloudReady = false;
+      updateSyncBadge(false, err.message);
+      loadFromLocalFallback();
+    }
+
+    // Escuchar cambios en la nube en tiempo real (Colección directa 'orders')
+    function setupCloudListener() {
+      if (!db || !auth.currentUser) return;
+      
+      const ordersCol = collection(db, 'orders');
+      onSnapshot(ordersCol, (snapshot) => {
+        const fetchedOrders = [];
+        snapshot.forEach((docSnapshot) => {
+          fetchedOrders.push(docSnapshot.data());
+        });
+
+        // Ordenar en memoria por fecha más reciente
+        fetchedOrders.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        if (fetchedOrders.length > 0) {
+          ordersCache = fetchedOrders;
+        } else if (ordersCache.length === 0) {
+          ordersCache = [...defaultSampleOrders];
+          ordersCache.forEach(o => syncOrderToCloud(o));
+        }
+
+        renderOrders();
+        updatePendingCounter();
+        updateCourierExportCounters();
+      }, (err) => {
+        console.error("Error al escuchar cambios en Firestore:", err);
+        updateSyncBadge(false, "Permisos Firestore bloqueados");
+      });
+    }
+
+    function updateSyncBadge(online, errorMsg = '') {
+      const badge = document.getElementById('cloud-sync-status');
+      if (!badge) return;
+      if (online) {
+        badge.className = "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 ml-1";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Nube Conectada`;
+        badge.title = "Sincronización activa con Firebase";
+      } else {
+        badge.className = "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 ml-1 cursor-pointer";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Sin Conexión Nube`;
+        badge.title = errorMsg ? `Error: ${errorMsg}. Revisa Authentication y Reglas de Firestore.` : "Modo local";
+      }
+    }
+
+    async function syncOrderToCloud(order) {
+      if (!isCloudReady || !db || !auth.currentUser) {
+        console.warn("No se pudo sincronizar a la nube: Firebase no está autenticado");
+        return;
+      }
+      try {
+        const cleanDocId = order.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const docRef = doc(db, 'orders', cleanDocId);
+        await setDoc(docRef, {
+          ...order,
+          timestamp: order.timestamp || Date.now()
+        }, { merge: true });
+        console.log(`Pedido ${order.id} sincronizado exitosamente en Firestore`);
+      } catch (err) {
+        console.error("Error al guardar en Firestore:", err);
+        showToast("⚠️ Error al sincronizar con la nube. Revisa consola.");
+      }
+    }
+
+    async function deleteOrderFromCloud(orderId) {
+      if (!isCloudReady || !db || !auth.currentUser) {
+        console.warn("Firebase no autenticado para eliminar");
+        return;
+      }
+      try {
+        const cleanDocId = orderId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const docRef = doc(db, 'orders', cleanDocId);
+        await deleteDoc(docRef);
+        console.log(`Pedido ${orderId} eliminado de Firestore`);
+      } catch (err) {
+        console.error("Error al eliminar pedido de Firestore:", err);
+        showToast("⚠️ Error al eliminar en la nube");
+      }
+    }
+
+    window.getOrders = () => ordersCache;
+    window.deleteOrderFromCloud = deleteOrderFromCloud;
+    window.saveOrders = (newOrders) => {
+      ordersCache = newOrders;
+      newOrders.forEach(o => syncOrderToCloud(o));
+      updatePendingCounter();
+      updateCourierExportCounters();
+    };
+
+    function loadFromLocalFallback() {
+      ordersCache = [...defaultSampleOrders];
+      renderOrders();
+      updatePendingCounter();
+      updateCourierExportCounters();
+    }
+  </script>
+
+  <script>
+    let currentFilter = 'all';
+    let currentUploadedImages = [];
+    let activePastingOrderId = null;
+    let activePackedPastingOrderId = null;
+
+    // Pedidos iniciales de muestra
+    const defaultSampleOrders = [
+      {
+        id: '#1001',
+        createdAt: '27/09/2026, 09:15 AM',
+        timestamp: Date.now() - 3600000,
+        productDesc: 'NISSAN SKYLINE R34 1:24 AZUL METÁLICO',
+        productImages: [
+          'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500&auto=format&fit=crop&q=60'
+        ],
+        rawCustomerData: 'NOMBRE: BERECHE CABRALES XIMENA SAMAÍ\nDNI: 61047570\nCEL: 904735702\n📍 DESTINO\nCHULUCANAS HUANCAVELICA',
+        courier: 'Shalom',
+        notes: '',
+        olvaOfficialLabel: null,
+        packedPackageImage: null,
+        status: 'pending'
+      },
+      {
+        id: '#1002',
+        createdAt: '27/09/2026, 09:30 AM',
+        timestamp: Date.now() - 1800000,
+        productDesc: 'TOYOTA SUPRA MK4 BLANCO FAST & FURIOUS',
+        productImages: [
+          'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60'
+        ],
+        rawCustomerData: 'NOMBRE: CASTILLO PAREDES JORGE\nDNI: 48921034\nCEL: 981234567\n📍 DESTINO\nAGENCIA SHALOM PIURA CENTRO',
+        courier: 'Shalom',
+        notes: 'Envolver con doble plástico burbuja',
+        olvaOfficialLabel: null,
+        packedPackageImage: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=500&auto=format&fit=crop&q=60',
+        status: 'packed'
+      }
+    ];
+
+    function compressImage(file, maxWidth = 650, quality = 0.55) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = () => resolve(event.target.result);
+        };
+      });
+    }
+
+    function switchView(viewName) {
+      const sellerView = document.getElementById('view-seller');
+      const logisticsView = document.getElementById('view-logistics');
+      const btnSeller = document.getElementById('btn-tab-seller');
+      const btnLogistics = document.getElementById('btn-tab-logistics');
+
+      if (viewName === 'seller') {
+        sellerView.classList.remove('hidden');
+        logisticsView.classList.add('hidden');
+        
+        btnSeller.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 bg-white text-indigo-700 shadow-sm";
+        btnLogistics.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 text-slate-600 hover:text-slate-900";
+      } else {
+        sellerView.classList.add('hidden');
+        logisticsView.classList.remove('hidden');
+        
+        btnLogistics.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 bg-white text-indigo-700 shadow-sm";
+        btnSeller.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 text-slate-600 hover:text-slate-900";
+        renderOrders();
+        updateCourierExportCounters();
+      }
+    }
+
+    function updatePendingCounter() {
+      const orders = getOrders();
+      const count = orders.filter(o => o.status === 'pending').length;
+      const badge = document.getElementById('badge-pending-count');
+      badge.textContent = count;
+      badge.className = count > 0 
+        ? "ml-1 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-pulse" 
+        : "ml-1 bg-slate-300 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold";
+    }
+
+    function updateCourierExportCounters() {
+      const orders = getOrders().filter(o => o.status !== 'shipped');
+      const shalomCount = orders.filter(o => o.courier === 'Shalom' || o.courier === 'Motorizado').length;
+      const olvaOrders = orders.filter(o => o.courier === 'Olva');
+      const olvaTotal = olvaOrders.length;
+      const olvaReady = olvaOrders.filter(o => Boolean(o.olvaOfficialLabel)).length;
+
+      const badgeShalom = document.getElementById('badge-count-shalom');
+      const badgeOlva = document.getElementById('badge-count-olva');
+      const badgeOlvaReady = document.getElementById('badge-count-olva-ready');
+
+      if (badgeShalom) badgeShalom.textContent = shalomCount;
+      if (badgeOlva) badgeOlva.textContent = olvaTotal;
+      if (badgeOlvaReady) badgeOlvaReady.textContent = `${olvaReady}/${olvaTotal}`;
+    }
+
+    function generateNewOrderId() {
+      const orders = getOrders();
+      let maxNum = 1000;
+      orders.forEach(o => {
+        const num = parseInt(o.id.replace('#', ''), 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+      });
+      document.getElementById('order-id').value = `#${maxNum + 1}`;
+    }
+
+    function updateCurrentDateString() {
+      const now = new Date();
+      document.getElementById('order-date').value = now.toLocaleString('es-PE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    const dropzone = document.getElementById('dropzone');
+    const imageFileInput = document.getElementById('image-file-input');
+    const thumbnailsContainer = document.getElementById('thumbnails-container');
+    const photoCountBadge = document.getElementById('photo-count-badge');
+
+    dropzone.addEventListener('click', () => imageFileInput.click());
+
+    window.addEventListener('paste', (e) => {
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      let pastedImageFile = null;
+
+      for (let item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          pastedImageFile = item.getAsFile();
+          break;
+        }
+      }
+
+      if (!pastedImageFile) return;
+
+      if (activePackedPastingOrderId) {
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          attachPackedPackageImage(activePackedPastingOrderId, ev.target.result);
+        };
+        reader.readAsDataURL(pastedImageFile);
+        return;
+      }
+
+      if (activePastingOrderId) {
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          attachOlvaOfficialLabel(activePastingOrderId, ev.target.result);
+        };
+        reader.readAsDataURL(pastedImageFile);
+        return;
+      }
+
+      const sellerView = document.getElementById('view-seller');
+      if (!sellerView.classList.contains('hidden')) {
+        e.preventDefault();
+        appendImageFile(pastedImageFile);
+        showToast('📸 ¡Foto de producto agregada con Ctrl+V!');
       }
     });
 
-    // Escuchar colección de pedidos
-    const ordersCol = collection(db, "orders");
-    onSnapshot(ordersCol, (snapshot) => {
-      ordersCache = [];
-      snapshot.forEach(docSnap => {
-        ordersCache.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      // Ordenar: Más recientes primero
-      ordersCache.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-      updateAllUI();
-    }, (error) => {
-      console.error("Firestore error:", error);
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('border-indigo-600', 'bg-indigo-100/50');
     });
 
-    function updateAllUI() {
-      renderOrdersTable();
-      renderDispatchCards();
-      updateStats();
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-indigo-600', 'bg-indigo-100/50');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-indigo-600', 'bg-indigo-100/50');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        Array.from(e.dataTransfer.files).forEach(file => appendImageFile(file));
+        showToast(`📸 ${e.dataTransfer.files.length} foto(s) agregada(s)`);
+      }
+    });
+
+    function handleFileSelect(event) {
+      if (event.target.files && event.target.files.length > 0) {
+        Array.from(event.target.files).forEach(file => appendImageFile(file));
+        showToast(`📸 ${event.target.files.length} foto(s) agregada(s)`);
+      }
+      imageFileInput.value = '';
     }
 
-    function updateStats() {
-      const total = ordersCache.length;
-      const packed = ordersCache.filter(o => o.packed).length;
-      const pending = total - packed;
-      const shalomPending = ordersCache.filter(o => (!o.agency || o.agency === 'SHALOM') && !o.packed).length;
-
-      document.getElementById('stat-total').innerText = total;
-      document.getElementById('stat-pending').innerText = pending;
-      document.getElementById('stat-packed').innerText = packed;
-      document.getElementById('stat-shalom').innerText = shalomPending;
-      document.getElementById('pending-counter').innerText = pending;
-      document.getElementById('pending-dispatch-badge').innerText = pending;
-    }
-
-    // Renderizado de la tabla en modo Admin
-    window.filterOrdersTable = () => {
-      renderOrdersTable();
-    };
-
-    function renderOrdersTable() {
-      const tbody = document.getElementById('orders-table-body');
-      tbody.innerHTML = "";
-
-      const query = (document.getElementById('search-input')?.value || "").toLowerCase().trim();
-      const agencyFilter = document.getElementById('filter-agency')?.value || "ALL";
-      const statusFilter = document.getElementById('filter-status')?.value || "ALL";
-
-      const filtered = ordersCache.filter(order => {
-        const matchesQuery = !query || 
-          (order.customerIdentifier || "").toLowerCase().includes(query) ||
-          (order.productName || "").toLowerCase().includes(query) ||
-          (order.customerData || "").toLowerCase().includes(query);
-
-        const currentAgency = order.agency || "SHALOM";
-        const matchesAgency = agencyFilter === "ALL" || currentAgency === agencyFilter;
-
-        const isPacked = order.packed === true;
-        const matchesStatus = statusFilter === "ALL" || 
-          (statusFilter === "PACKED" && isPacked) || 
-          (statusFilter === "PENDING" && !isPacked);
-
-        return matchesQuery && matchesAgency && matchesStatus;
+    function appendImageFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      compressImage(file).then((compressedBase64) => {
+        currentUploadedImages.push(compressedBase64);
+        renderThumbnails();
       });
+    }
+
+    function removeImageAtIndex(index, e) {
+      if (e) e.stopPropagation();
+      currentUploadedImages.splice(index, 1);
+      renderThumbnails();
+      showToast('🗑️ Foto eliminada');
+    }
+
+    function renderThumbnails() {
+      if (currentUploadedImages.length === 0) {
+        thumbnailsContainer.classList.add('hidden');
+        thumbnailsContainer.innerHTML = '';
+        photoCountBadge.textContent = '0 fotos añadidas';
+        photoCountBadge.className = 'text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full';
+        return;
+      }
+
+      thumbnailsContainer.classList.remove('hidden');
+      photoCountBadge.textContent = `${currentUploadedImages.length} foto${currentUploadedImages.length > 1 ? 's' : ''} añadida${currentUploadedImages.length > 1 ? 's' : ''}`;
+      photoCountBadge.className = 'text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full';
+
+      thumbnailsContainer.innerHTML = currentUploadedImages.map((imgSrc, idx) => `
+        <div class="relative group bg-white rounded-xl border border-slate-200 p-1.5 shadow-sm">
+          <img src="${imgSrc}" alt="Foto ${idx + 1}" class="w-full h-24 object-contain rounded-lg bg-slate-50">
+          <span class="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">#${idx + 1}</span>
+          <button type="button" onclick="removeImageAtIndex(${idx}, event)" title="Eliminar foto" class="absolute -top-2 -right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1 shadow-md transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function handleNotesInput(textarea) {
+      const container = document.getElementById('notes-container');
+      if (textarea.value.trim().length > 0) {
+        container.classList.remove('bg-slate-50', 'border-slate-200');
+        container.classList.add('bg-amber-50/80', 'border-amber-300');
+      } else {
+        container.classList.remove('bg-amber-50/80', 'border-amber-300');
+        container.classList.add('bg-slate-50', 'border-slate-200');
+      }
+    }
+
+    function handleFormSubmit(event) {
+      event.preventDefault();
+
+      if (currentUploadedImages.length === 0) {
+        showToast('⚠️ Debes agregar al menos 1 foto del producto (Ctrl+V).');
+        dropzone.focus();
+        return;
+      }
+
+      const courierRadio = document.querySelector('input[name="courier"]:checked');
+      const notesVal = document.getElementById('order-notes').value.trim();
+
+      const newOrder = {
+        id: document.getElementById('order-id').value.trim() || `#${Date.now().toString().slice(-4)}`,
+        createdAt: document.getElementById('order-date').value,
+        timestamp: Date.now(),
+        productDesc: document.getElementById('product-desc').value.trim(),
+        productImages: [...currentUploadedImages],
+        rawCustomerData: document.getElementById('client-raw-data').value.trim(),
+        courier: courierRadio ? courierRadio.value : 'Shalom',
+        notes: notesVal,
+        olvaOfficialLabel: null,
+        packedPackageImage: null,
+        status: 'pending'
+      };
+
+      const orders = window.getOrders ? window.getOrders() : [];
+      orders.unshift(newOrder);
+      if (window.saveOrders) window.saveOrders(orders);
+
+      showToast(`✅ Pedido ${newOrder.id} enviado a despacho`);
+
+      document.getElementById('order-form').reset();
+      currentUploadedImages = [];
+      renderThumbnails();
+      generateNewOrderId();
+      updateCurrentDateString();
+      handleNotesInput(document.getElementById('order-notes'));
+      updatePendingCounter();
+      updateCourierExportCounters();
+    }
+
+    function handleOlvaCourierWorkflow() {
+      setFilter('courier_olva');
+      window.open('https://registrodeenvios.olvacourier.com/', '_blank');
+      showToast('🚀 Filtrado por Olva y página oficial abierta en nueva pestaña');
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      const filterButtons = ['all', 'courier_shalom', 'courier_olva', 'pending', 'packed'];
+      filterButtons.forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (btn) {
+          if (f === filter) {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-sm transition-all";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all";
+          }
+        }
+      });
+      renderOrders();
+    }
+
+    function renderOrders() {
+      const orders = getOrders();
+      const container = document.getElementById('orders-container');
+      const emptyState = document.getElementById('empty-state');
+
+      let filtered = orders;
+      if (currentFilter === 'pending') {
+        filtered = orders.filter(o => o.status === 'pending');
+      } else if (currentFilter === 'packed') {
+        filtered = orders.filter(o => o.status === 'packed');
+      } else if (currentFilter === 'courier_shalom') {
+        filtered = orders.filter(o => (o.courier === 'Shalom' || o.courier === 'Motorizado') && o.status !== 'shipped');
+      } else if (currentFilter === 'courier_olva') {
+        filtered = orders.filter(o => o.courier === 'Olva' && o.status !== 'shipped');
+      }
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500">No hay pedidos que coincidan con el filtro</td></tr>`;
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
         return;
       }
 
-      filtered.forEach(order => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-800/40 transition";
-        const isPacked = order.packed === true;
-
-        tr.innerHTML = `
-          <td class="p-3">
-            <span class="font-mono font-bold text-indigo-400 block">${order.customerIdentifier || 'SIN ID'}</span>
-            ${order.specialNote ? `<span class="inline-block mt-1 text-[10px] bg-red-950/60 text-red-400 border border-red-800/50 px-1.5 py-0.5 rounded font-bold">🚨 ${order.specialNote}</span>` : ''}
-          </td>
-          <td class="p-3">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
-              order.agency === 'OLVA' ? 'bg-amber-500/20 text-amber-300' :
-              order.agency === 'MOTORIZADO' ? 'bg-purple-500/20 text-purple-300' :
-              'bg-blue-500/20 text-blue-300'
-            }">${order.agency || 'SHALOM'}</span>
-          </td>
-          <td class="p-3 font-semibold text-white">${order.productName || 'N/A'}</td>
-          <td class="p-3 text-slate-300 font-mono text-[11px] whitespace-pre-line leading-tight">${order.customerData || ''}</td>
-          <td class="p-3">
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              isPacked ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-            }">${isPacked ? 'EMPACADO' : 'PENDIENTE'}</span>
-          </td>
-          <td class="p-3 text-right space-x-1">
-            <button onclick="window.editOrder('${order.id}')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold">✏️</button>
-            <button onclick="window.openDeleteModal('${order.id}')" class="px-2 py-1 rounded bg-red-950/40 hover:bg-red-900/50 text-red-400 text-[11px] font-bold">🗑️</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
+      emptyState.classList.add('hidden');
+      container.innerHTML = filtered.map(order => createOrderCardHtml(order)).join('');
     }
 
-    // Renderizado de tarjetas de Modo Despacho
-    function renderDispatchCards() {
-      const grid = document.getElementById('dispatch-grid');
-      grid.innerHTML = "";
-
-      ordersCache.forEach(order => {
-        const isPacked = order.packed === true;
-        const hasNote = order.specialNote && order.specialNote.trim() !== "";
-
-        const card = document.createElement('div');
-        card.className = `rounded-2xl p-4 transition border ${
-          isPacked 
-            ? 'bg-slate-900/40 border-slate-800/60 opacity-80' 
-            : hasNote
-              ? 'bg-slate-900/90 border-red-500/80 ring-2 ring-red-500/20'
-              : 'bg-slate-900/90 border-slate-700/80'
-        }`;
-
-        card.innerHTML = `
-          <div class="flex justify-between items-start gap-2 mb-2">
-            <div>
-              <span class="text-xs font-mono font-bold text-indigo-400">${order.customerIdentifier || 'SIN ID'}</span>
-              <h4 class="text-sm font-extrabold text-white leading-snug">${order.productName || 'Sin Producto'}</h4>
-            </div>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              isPacked ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-            }">
-              ${isPacked ? 'EMPACADO' : 'PENDIENTE'}
-            </span>
-          </div>
-
-          <!-- Indicación Especial en Rojo Vistoso -->
-          ${hasNote ? `
-            <div class="mb-3 bg-red-950/40 border-2 border-red-500 rounded-xl p-2.5">
-              <div class="text-[11px] font-black text-red-400 flex items-center gap-1 uppercase tracking-wider mb-0.5">
-                <span>🚨</span> INDICACIÓN ESPECIAL / OJO:
-              </div>
-              <div class="bg-red-900/30 border border-red-500/30 rounded-lg p-2 text-white font-bold text-xs">
-                ${order.specialNote}
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- Datos de entrega -->
-          <div class="bg-slate-800/60 rounded-xl p-2.5 mb-3 text-xs text-slate-300 font-mono whitespace-pre-line leading-relaxed">
-            ${order.customerData || 'Sin datos'}
-          </div>
-
-          <!-- Foto del paquete (Clicable sin botón adicional de copiar) -->
-          ${order.photoUrl ? `
-            <div class="mb-3">
-              <p class="text-[11px] text-slate-400 font-semibold mb-1">Foto del Paquete (Clic para agrandar):</p>
-              <img src="${order.photoUrl}" 
-                   onclick="window.openImageViewer('${order.photoUrl}')" 
-                   alt="Foto del paquete" 
-                   class="w-full h-36 object-cover rounded-xl border border-slate-700 cursor-pointer hover:opacity-90 active:scale-[0.99] transition shadow-md">
-            </div>
-          ` : `
-            <div class="mb-3">
-              <label class="block text-center border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-xl p-2.5 cursor-pointer transition">
-                <span class="text-xs text-slate-400 font-semibold">📷 Subir Foto de Paquete</span>
-                <input type="file" accept="image/*" capture="environment" class="hidden" onchange="window.uploadPackagePhoto('${order.id}', this)">
-              </label>
-            </div>
-          `}
-
-          <!-- Acciones -->
-          <div class="space-y-2 pt-1 border-t border-slate-800/80">
-            <button onclick="window.togglePackStatus('${order.id}', ${!isPacked})" class="w-full py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              isPacked 
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' 
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'
-            }">
-              <span>${isPacked ? '↩️ Desmarcar' : '📦 Empacado'}</span>
-            </button>
-
-            <button onclick="window.openDeleteModal('${order.id}')" class="w-full py-1.5 rounded-xl bg-red-950/30 hover:bg-red-900/40 text-red-400 border border-red-800/30 text-xs font-semibold transition flex items-center justify-center gap-1">
-              <span>🗑️</span> Borrar Pedido
-            </button>
-          </div>
-        `;
-
-        grid.appendChild(card);
-      });
+    function getCourierBadgeStyle(courier) {
+      switch (courier) {
+        case 'Shalom':
+          return 'bg-rose-100 text-rose-800 border-rose-200';
+        case 'Olva':
+          return 'bg-amber-100 text-amber-900 border-amber-300';
+        default:
+          return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      }
     }
 
-    // Funciones en Window para vinculación en HTML
-    window.toggleModal = (id) => {
-      const modal = document.getElementById(id);
-      modal.classList.toggle('hidden');
-      modal.classList.toggle('flex');
-    };
+    function getStatusBadgeStyle(status) {
+      if (status === 'packed') {
+        return '<span class="bg-blue-100 text-blue-800 text-[11px] font-bold px-2 py-0.5 rounded-full border border-blue-200">📦 Empacado</span>';
+      }
+      if (status === 'shipped') {
+        return '<span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">🚚 Despachado</span>';
+      }
+      return '<span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded-full border border-amber-200 animate-pulse">⏳ Por Empacar</span>';
+    }
 
-    window.openNewOrderModal = () => {
-      document.getElementById('modal-order-title').innerText = "📦 Crear Pedido";
-      document.getElementById('edit-order-id').value = "";
-      document.getElementById('order-id-input').value = "";
-      document.getElementById('order-agency-input').value = "SHALOM";
-      document.getElementById('order-product-input').value = "";
-      document.getElementById('order-data-input').value = "";
-      document.getElementById('order-note-input').value = "";
-      window.toggleModal('new-order-modal');
-    };
+    function extractCustomerPhone(rawText) {
+      if (!rawText) return null;
+      const match = rawText.match(/(?:cel|tel|celular|telefono|teléfono)?\s*[:.-]?\s*(9\d{8})/i);
+      if (match && match[1]) return match[1];
+      const generalDigits = rawText.match(/\b(9\d{8})\b/);
+      return generalDigits ? generalDigits[1] : null;
+    }
 
-    window.editOrder = (id) => {
-      const order = ordersCache.find(o => o.id === id);
-      if (!order) return;
+    function createOrderCardHtml(order) {
+      const courierBadge = getCourierBadgeStyle(order.courier);
+      const isPacked = order.status === 'packed';
+      const isShipped = order.status === 'shipped';
+      const isOlva = order.courier === 'Olva';
+      const images = order.productImages || (order.productImage ? [order.productImage] : []);
+      const hasNotes = order.notes && order.notes.trim().length > 0;
+      const hasOlvaLabel = Boolean(order.olvaOfficialLabel);
+      const hasPackedImage = Boolean(order.packedPackageImage);
+      const cleanOrderId = order.id.replace('#', '');
+      const clientName = extractCustomerName(order.rawCustomerData);
+      const clientPhone = extractCustomerPhone(order.rawCustomerData);
 
-      document.getElementById('modal-order-title').innerText = "✏️ Editar Pedido";
-      document.getElementById('edit-order-id').value = order.id;
-      document.getElementById('order-id-input').value = order.customerIdentifier || "";
-      document.getElementById('order-agency-input').value = order.agency || "SHALOM";
-      document.getElementById('order-product-input').value = order.productName || "";
-      document.getElementById('order-data-input').value = order.customerData || "";
-      document.getElementById('order-note-input').value = order.specialNote || "";
-
-      window.toggleModal('new-order-modal');
-    };
-
-    window.saveOrderData = async () => {
-      const editId = document.getElementById('edit-order-id').value;
-      const identifier = document.getElementById('order-id-input').value.trim();
-      const agency = document.getElementById('order-agency-input').value;
-      const product = document.getElementById('order-product-input').value.trim();
-      const data = document.getElementById('order-data-input').value.trim();
-      const note = document.getElementById('order-note-input').value.trim();
-
-      if (!data) {
-        alert("Ingresa los datos para el rótulo.");
-        return;
+      let galleryHtml = '';
+      if (images.length === 1) {
+        galleryHtml = `
+          <div class="relative bg-slate-100 rounded-2xl overflow-hidden cursor-pointer group" onclick="openImageModal('${images[0]}')">
+            <img src="${images[0]}" alt="Producto" class="w-full h-36 object-contain bg-white group-hover:scale-105 transition-transform duration-200">
+            <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1">
+              🔍 Clic para ampliar
+            </div>
+          </div>
+        `;
+      } else if (images.length > 1) {
+        galleryHtml = `
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Fotos del producto (${images.length}):</span>
+              <span class="text-[10px] text-indigo-600 font-semibold">Toca para ampliar</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              ${images.map((img, i) => `
+                <div class="relative bg-slate-100 rounded-xl overflow-hidden cursor-pointer group border border-slate-200" onclick="openImageModal('${img}')">
+                  <img src="${img}" alt="Foto ${i+1}" class="w-full h-20 object-contain bg-white group-hover:scale-105 transition-transform duration-200">
+                  <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1 rounded font-bold">#${i+1}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
       }
 
-      try {
-        if (editId) {
-          await updateDoc(doc(db, "orders", editId), {
-            customerIdentifier: identifier,
-            agency: agency,
-            productName: product,
-            customerData: data,
-            specialNote: note
-          });
+      let olvaLabelSection = '';
+      if (isOlva) {
+        if (hasOlvaLabel) {
+          olvaLabelSection = `
+            <div class="bg-amber-50/90 border-2 border-amber-400 rounded-2xl p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                  <span class="text-emerald-600">✓</span> RÓTULO OFICIAL OLVA ADJUNTO
+                </span>
+                <button onclick="removeOlvaOfficialLabel('${order.id}')" title="Reemplazar captura" class="text-[11px] text-rose-600 hover:underline font-bold">
+                  Cambiar
+                </button>
+              </div>
+
+              <div class="relative bg-white rounded-xl overflow-hidden border border-amber-300 cursor-pointer group" onclick="openImageModal('${order.olvaOfficialLabel}')">
+                <img src="${order.olvaOfficialLabel}" alt="Rótulo Olva" class="w-full h-28 object-contain bg-slate-50 group-hover:scale-105 transition-transform">
+                <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
+                  🔍 Clic para pantalla completa
+                </div>
+              </div>
+            </div>
+          `;
         } else {
-          await addDoc(ordersCol, {
-            customerIdentifier: identifier,
-            agency: agency,
-            productName: product,
-            customerData: data,
-            specialNote: note,
-            packed: false,
-            photoUrl: "",
-            createdAt: serverTimestamp()
-          });
+          olvaLabelSection = `
+            <div id="olva-dropzone-${cleanOrderId}" 
+                 tabindex="0" 
+                 onfocus="setActivePastingOrder('${order.id}')"
+                 onblur="clearActivePastingOrder('${order.id}')"
+                 onclick="triggerLabelFileInput('${order.id}')" 
+                 class="border-2 border-dashed border-amber-300 hover:border-amber-500 focus:border-amber-600 bg-amber-50/60 rounded-2xl p-3 text-center cursor-pointer transition-all outline-none">
+              
+              <input type="file" id="file-label-${cleanOrderId}" accept="image/*" class="hidden" onchange="handleLabelFileSelected('${order.id}', event)">
+              
+              <div class="flex items-center justify-center gap-1 text-xs font-black text-amber-950 mb-0.5">
+                <span>📌 Rótulo Oficial Olva</span>
+              </div>
+              <p class="text-xs text-amber-900 font-bold">
+                Pega la captura
+              </p>
+            </div>
+          `;
         }
-        window.toggleModal('new-order-modal');
-      } catch (e) {
-        alert("Error al guardar: " + e.message);
       }
-    };
 
-    window.togglePackStatus = async (id, status) => {
-      try {
-        await updateDoc(doc(db, "orders", id), { packed: status });
-      } catch (e) {
-        console.error("Error al actualizar:", e);
+      // FOTO DEL PAQUETE EMPACADO (Clicable directamente, sin botón de copiar)
+      let packedPhotoSection = '';
+      if (hasPackedImage) {
+        packedPhotoSection = `
+          <div class="bg-emerald-50/80 border border-emerald-300 rounded-2xl p-2.5 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-950 flex items-center gap-1">
+                <span>📸</span> Paquete Empacado
+              </span>
+              <button onclick="removePackedPackageImage('${order.id}')" title="Eliminar foto" class="text-[11px] text-rose-600 hover:underline font-semibold">
+                Cambiar
+              </button>
+            </div>
+
+            <!-- Previsualización de la foto del paquete (Clic para pantalla completa) -->
+            <div class="relative bg-white rounded-xl overflow-hidden border border-emerald-200 cursor-pointer group" onclick="openImageModal('${order.packedPackageImage}')">
+              <img src="${order.packedPackageImage}" alt="Paquete Empacado" class="w-full h-32 object-contain bg-slate-50 group-hover:scale-105 transition-transform">
+              <div class="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-medium">
+                🔍 Clic para pantalla completa
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        packedPhotoSection = `
+          <div id="packed-dropzone-${cleanOrderId}" 
+               tabindex="0"
+               onfocus="setActivePackedPastingOrder('${order.id}')"
+               onblur="clearActivePackedPastingOrder('${order.id}')"
+               class="border-2 border-dashed border-emerald-300 hover:border-emerald-400 focus:border-emerald-500 bg-emerald-50/40 rounded-2xl p-2.5 text-center transition-all outline-none">
+            
+            <input type="file" id="camera-packed-${cleanOrderId}" accept="image/*" capture="environment" class="hidden" onchange="handlePackedFileSelected('${order.id}', event)">
+            <input type="file" id="file-packed-${cleanOrderId}" accept="image/*" class="hidden" onchange="handlePackedFileSelected('${order.id}', event)">
+            
+            <div class="flex items-center justify-center gap-1 text-xs font-bold text-emerald-950 mb-2">
+              <span>📸 Foto del Paquete Empacado</span>
+            </div>
+
+            <div class="flex items-center justify-center gap-2">
+              <button type="button" onclick="triggerPackedCameraInput('${order.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-transform active:scale-95">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Tomar Foto
+              </button>
+
+              <button type="button" onclick="triggerPackedFileInput('${order.id}')" class="bg-white border border-emerald-300 text-emerald-900 hover:bg-emerald-100 font-semibold text-xs px-3 py-1.5 rounded-xl transition-colors shadow-sm">
+                Subir Foto
+              </button>
+            </div>
+          </div>
+        `;
       }
-    };
 
-    window.openDeleteModal = (id) => {
-      pendingDeleteId = id;
-      const modal = document.getElementById('delete-modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    };
-
-    window.closeDeleteModal = () => {
-      pendingDeleteId = null;
-      const modal = document.getElementById('delete-modal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    };
-
-    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-      if (!pendingDeleteId) return;
-      try {
-        await deleteDoc(doc(db, "orders", pendingDeleteId));
-        window.closeDeleteModal();
-      } catch (e) {
-        alert("Error al borrar: " + e.message);
-      }
-    });
-
-    // Compresión y guardado de foto del paquete
-    window.uploadPackagePhoto = (id, input) => {
-      const file = input.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 720;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.65);
-          updateDoc(doc(db, "orders", id), { photoUrl: compressedBase64 });
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    };
-
-    // Limpieza de datos de envío (elimina la línea DESTINO)
-    function sanitizeCustomerData(rawText) {
-      if (!rawText) return "";
-      return rawText
-        .split('\n')
-        .map(l => l.trim())
-        .filter(l => {
-          const clean = l.replace(/[^\w\s]/gi, '').trim().toUpperCase();
-          return clean !== "DESTINO" && clean !== "DATOS DEL DESTINATARIO";
-        })
-        .join('\n');
-    }
-
-    // Logo Vectorial / logo.png
-    function getLogoHtml() {
       return `
-        <div style="height: 28px; display: flex; align-items: center;">
-          <img src="logo.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="height: 28px; max-width: 95px; object-fit: contain;">
-          <svg style="display:none; height: 26px; width: 90px;" viewBox="0 0 160 50">
-            <text x="2" y="20" font-family="Arial Black, Impact" font-weight="900" font-style="italic" font-size="14" fill="#000">CARROS ESCALA</text>
-            <text x="18" y="42" font-family="Arial Black, Impact" font-weight="900" font-style="italic" font-size="24" fill="#e11d48">PERU</text>
-            <path d="M110 32 C120 32 135 30 148 35 C152 36 156 39 157 43 L105 43" stroke="#000" stroke-width="2.5" fill="none"/>
-            <path d="M125 24 C132 20 142 20 150 25 L155 33" stroke="#000" stroke-width="2.5" fill="none"/>
-          </svg>
+        <div class="bg-white rounded-3xl border ${hasNotes ? 'border-red-500 ring-2 ring-red-300' : 'border-slate-200'} shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <div class="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <span class="text-base font-black text-slate-900">${order.id}</span>
+                <span class="text-[11px] text-slate-400 block">${order.createdAt}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold px-2.5 py-1 rounded-xl border ${courierBadge}">${order.courier}</span>
+                ${getStatusBadgeStyle(order.status)}
+              </div>
+            </div>
+
+            <div class="p-4 space-y-3">
+              ${galleryHtml}
+              <div>
+                <span class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Artículo a despachar:</span>
+                <p class="text-sm font-bold text-slate-800 leading-snug">${escapeHtml(order.productDesc)}</p>
+              </div>
+
+              ${olvaLabelSection}
+              ${packedPhotoSection}
+            </div>
+
+            ${hasNotes ? `
+              <div class="mx-4 mb-3 p-3.5 bg-red-50 border-2 border-red-500 rounded-2xl shadow-sm">
+                <div class="flex items-center gap-1.5 text-xs font-black text-red-600 tracking-wide uppercase">
+                  <span class="text-base">🚨</span>
+                  <span>INDICACIÓN ESPECIAL / OJO:</span>
+                </div>
+                <p class="text-xs text-red-950 mt-1.5 font-bold whitespace-pre-line bg-white/90 p-2.5 rounded-xl border border-red-200 leading-relaxed">${escapeHtml(order.notes)}</p>
+              </div>
+            ` : ''}
+
+            <div class="px-4 pb-3 border-t border-slate-100 pt-3">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Datos del Destinatario:</span>
+              <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                <pre class="text-xs font-sans font-semibold text-slate-800 whitespace-pre-wrap leading-relaxed select-all">${escapeHtml(order.rawCustomerData)}</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-slate-50 border-t border-slate-100 space-y-2">
+            <div>
+              ${!isPacked && !isShipped ? `
+                <button onclick="updateOrderStatus('${order.id}', 'packed')" class="w-full text-xs font-bold py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 shadow-sm transition-colors">
+                  📦 Empacado
+                </button>
+              ` : `
+                <button onclick="updateOrderStatus('${order.id}', 'pending')" class="w-full text-xs font-semibold py-2 px-3 rounded-xl border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors">
+                  ↩️ Deshacer
+                </button>
+              `}
+            </div>
+
+            ${!isShipped ? `
+              <button onclick="updateOrderStatus('${order.id}', 'shipped')" class="w-full text-xs font-bold py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1 shadow-sm transition-colors">
+                🚚 Marcar como Despachado
+              </button>
+            ` : `
+              <div class="flex items-center justify-between text-xs text-emerald-700 font-bold px-2 py-1 bg-emerald-50 rounded-xl">
+                <span>✅ Paquete Despachado</span>
+                <button onclick="updateOrderStatus('${order.id}', 'packed')" class="text-slate-500 hover:text-slate-800 text-[11px] font-normal underline">Deshacer</button>
+              </div>
+            `}
+
+            <button onclick="promptDeleteOrder('${order.id}')" class="w-full text-xs font-bold py-1.5 px-3 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Borrar Pedido
+            </button>
+          </div>
         </div>
       `;
     }
 
-    // GENERAR RÓTULOS (8 POR HOJA A4, 16PX, CON ID EN LUGAR DE CLIENTE)
-    window.openPrintModal = () => {
-      const activeOrders = ordersCache.filter(o => !o.packed);
-      if (activeOrders.length === 0) {
-        alert("No hay pedidos pendientes para generar rótulos.");
-        return;
-      }
+    function setActivePackedPastingOrder(orderId) {
+      activePackedPastingOrderId = orderId;
+      const el = document.getElementById(`packed-dropzone-${orderId.replace('#', '')}`);
+      if (el) el.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-100/60');
+    }
 
-      const container = document.getElementById('print-container');
-      container.innerHTML = "";
-
-      const pageSize = 8;
-      const totalPages = Math.ceil(activeOrders.length / pageSize);
-
-      for (let p = 0; p < totalPages; p++) {
-        const pageOrders = activeOrders.slice(p * pageSize, (p + 1) * pageSize);
-        const sheet = document.createElement('div');
-        sheet.className = `a4-sheet ${p < totalPages - 1 ? 'page-break' : ''}`;
-
-        pageOrders.forEach(order => {
-          const cleanData = sanitizeCustomerData(order.customerData);
-          const item = document.createElement('div');
-          item.className = "print-box-wrapper";
-          item.innerHTML = `
-            <div class="print-box-bordered">
-              <div class="print-box-header">
-                <div class="print-header-title">
-                  <span>📦</span> DATOS DEL DESTINATARIO
-                </div>
-                ${getLogoHtml()}
-              </div>
-              <div class="customer-data-text">${cleanData}</div>
-            </div>
-            <!-- Pie de rótulo con ID en vez de CLIENTE -->
-            <div class="print-label-meta">
-              <div><b>ID:</b> ${order.customerIdentifier || 'N/A'}</div>
-              <div><b>PRODUCTO:</b> ${order.productName || 'N/A'}</div>
-            </div>
-          `;
-          sheet.appendChild(item);
-        });
-
-        container.appendChild(sheet);
-      }
-
-      document.body.className = "printing-labels";
-      window.print();
+    function clearActivePackedPastingOrder(orderId) {
       setTimeout(() => {
-        document.body.className = "";
-      }, 1000);
-    };
+        if (activePackedPastingOrderId === orderId) {
+          activePackedPastingOrderId = null;
+          const el = document.getElementById(`packed-dropzone-${orderId.replace('#', '')}`);
+          if (el) el.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-100/60');
+        }
+      }, 200);
+    }
 
-    // LIMPIAR DESPACHADOS CON EXPORTACIÓN A PDF Y FECHA DEL DÍA
-    window.handleCleanDispatched = async () => {
-      const dispatchedOrders = ordersCache.filter(o => o.packed === true);
+    function triggerPackedCameraInput(orderId) {
+      setActivePackedPastingOrder(orderId);
+      const input = document.getElementById(`camera-packed-${orderId.replace('#', '')}`);
+      if (input) input.click();
+    }
 
-      if (dispatchedOrders.length === 0) {
-        alert("No hay pedidos empacados para limpiar.");
+    function triggerPackedFileInput(orderId) {
+      setActivePackedPastingOrder(orderId);
+      const input = document.getElementById(`file-packed-${orderId.replace('#', '')}`);
+      if (input) input.click();
+    }
+
+    function handlePackedFileSelected(orderId, event) {
+      if (event.target.files && event.target.files[0]) {
+        compressImage(event.target.files[0]).then((compressedBase64) => {
+          attachPackedPackageImage(orderId, compressedBase64);
+        });
+      }
+    }
+
+    function attachPackedPackageImage(orderId, base64Image) {
+      const orders = window.getOrders ? window.getOrders() : [];
+      const target = orders.find(o => o.id === orderId);
+      if (target) {
+        target.packedPackageImage = base64Image;
+        if (target.status === 'pending') {
+          target.status = 'packed';
+        }
+        if (window.saveOrders) window.saveOrders(orders);
+        renderOrders();
+        activePackedPastingOrderId = null;
+        showToast(`📸 Foto del paquete empacado guardada para ${orderId}`);
+      }
+    }
+
+    function removePackedPackageImage(orderId) {
+      const orders = getOrders();
+      const target = orders.find(o => o.id === orderId);
+      if (target) {
+        target.packedPackageImage = null;
+        saveOrders(orders);
+        renderOrders();
+        showToast(`Foto de paquete removida de ${orderId}`);
+      }
+    }
+
+    function setActivePastingOrder(orderId) {
+      activePastingOrderId = orderId;
+      const el = document.getElementById(`olva-dropzone-${orderId.replace('#', '')}`);
+      if (el) el.classList.add('ring-2', 'ring-amber-500', 'bg-amber-100/60');
+    }
+
+    function clearActivePastingOrder(orderId) {
+      setTimeout(() => {
+        if (activePastingOrderId === orderId) {
+          activePastingOrderId = null;
+          const el = document.getElementById(`olva-dropzone-${orderId.replace('#', '')}`);
+          if (el) el.classList.remove('ring-2', 'ring-amber-500', 'bg-amber-100/60');
+        }
+      }, 200);
+    }
+
+    function triggerLabelFileInput(orderId) {
+      setActivePastingOrder(orderId);
+      const input = document.getElementById(`file-label-${orderId.replace('#', '')}`);
+      if (input) input.click();
+    }
+
+    function handleLabelFileSelected(orderId, event) {
+      if (event.target.files && event.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          attachOlvaOfficialLabel(orderId, e.target.result);
+        };
+        reader.readAsDataURL(event.target.files[0]);
+      }
+    }
+
+    function attachOlvaOfficialLabel(orderId, base64Image) {
+      const orders = getOrders();
+      const target = orders.find(o => o.id === orderId);
+      if (target) {
+        target.olvaOfficialLabel = base64Image;
+        saveOrders(orders);
+        renderOrders();
+        activePastingOrderId = null;
+        showToast(`🏷️ Rótulo oficial de Olva adjuntado a ${orderId}`);
+      }
+    }
+
+    function removeOlvaOfficialLabel(orderId) {
+      const orders = getOrders();
+      const target = orders.find(o => o.id === orderId);
+      if (target) {
+        target.olvaOfficialLabel = null;
+        saveOrders(orders);
+        renderOrders();
+        showToast(`Rótulo de Olva removido de ${orderId}`);
+      }
+    }
+
+    function updateOrderStatus(orderId, newStatus) {
+      const orders = getOrders();
+      const target = orders.find(o => o.id === orderId);
+      if (target) {
+        target.status = newStatus;
+        saveOrders(orders);
+        renderOrders();
+        showToast(`Pedido ${orderId}: ${newStatus === 'packed' ? 'Empacado' : newStatus === 'shipped' ? 'Despachado' : 'Pendiente'}`);
+      }
+    }
+
+    // LIMPIAR DESPACHADOS: Guarda como PDF con fecha actual y luego confirma borrado de Firebase
+    function clearCompletedOrders() {
+      const orders = getOrders();
+      const completedOrders = orders.filter(o => o.status === 'packed' || o.status === 'shipped');
+
+      if (completedOrders.length === 0) {
+        showToast('⚠️ No hay pedidos empacados o despachados para limpiar.');
         return;
       }
 
       const now = new Date();
-      const dateString = now.toISOString().split('T')[0];
-      const previousTitle = document.title;
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const dateString = `${yyyy}-${mm}-${dd}`;
+      const previousDocTitle = document.title;
       document.title = `Despacho_${dateString}`;
 
-      const reportContainer = document.getElementById('report-print-container');
-      reportContainer.innerHTML = `
-        <div style="padding: 20px; font-family: sans-serif;">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 16px;">
+      // Armar las tarjetas de despacho en una hoja imprimible
+      const reportHtml = `
+        <div style="background: white; padding: 20px; font-family: 'Inter', system-ui, sans-serif; color: #0f172a;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
             <div>
-              <h1 style="font-size: 20px; font-weight: 900; margin: 0; color: #000;">REPORTE DE DESPACHO DIARIO</h1>
-              <p style="font-size: 13px; color: #475569; margin: 2px 0 0 0;">Fecha: <b>${dateString}</b> | Total despachados: <b>${dispatchedOrders.length}</b></p>
+              <h1 style="font-size: 20px; font-weight: 900; margin: 0; text-transform: uppercase;">Reporte de Despacho Diario</h1>
+              <p style="font-size: 13px; color: #475569; margin: 2px 0 0 0;">Fecha: <b>${dateString}</b> | Total despachados: <b>${completedOrders.length} pedidos</b></p>
             </div>
-            ${getLogoHtml()}
+            ${getOfficialLogoSvg()}
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;">
-            ${dispatchedOrders.map(order => `
-              <div style="border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px; page-break-inside: avoid; background: #fff;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                  <span style="font-size: 12px; font-weight: bold; color: #4338ca;">ID: ${order.customerIdentifier || 'N/A'}</span>
-                  <span style="font-size: 10px; font-weight: bold; background: #dcfce7; color: #15803d; padding: 2px 6px; border-radius: 6px;">DESPACHADO</span>
+            ${completedOrders.map(order => `
+              <div style="border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px; page-break-inside: avoid; background: #ffffff;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 13px; font-weight: 900; color: #0f172a;">ID: ${escapeHtml(order.id)}</span>
+                  <span style="font-size: 10px; font-weight: 800; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 6px;">
+                    ${order.courier ? order.courier.toUpperCase() : 'ENVÍO'}
+                  </span>
                 </div>
-                <div style="font-size: 13px; font-weight: 800; color: #000; margin-bottom: 4px;">${order.productName \vert{}\vert{} 'Sin Producto'}</div>${order.specialNote ? `
-                  <div style="font-size: 11px; background: #fee2e2; color: #b91c1c; padding: 4px 6px; border-radius: 6px; margin-bottom: 6px; font-weight: bold;">
-                    ⚠️ ${order.specialNote}
+                <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                  ${escapeHtml(order.productDesc || 'Sin descripción')}
+                </div>
+                
+                ${order.notes && order.notes.trim().length > 0 ? `
+                  <div style="font-size: 11px; background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 8px; margin-bottom: 6px; font-weight: 800; border: 1px solid #fca5a5;">
+                    🚨 OJO: ${escapeHtml(order.notes)}
                   </div>
                 ` : ''}
 
-                <div style="font-size: 11px; font-family: monospace; white-space: pre-line; color: #334155; margin-bottom: 6px; background: #f8fafc; padding: 6px; border-radius: 6px;">${order.customerData \vert{}\vert{} ''}</div>${order.photoUrl ? `
-                  <img src="${order.photoUrl}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0;">
-                ` : '<div style="font-size: 10px; color: #94a3b8; font-style: italic;">Sin foto adjunta</div>'}
+                <div style="font-size: 11px; font-family: monospace; white-space: pre-wrap; color: #334155; margin-bottom: 8px; background: #f8fafc; padding: 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                  ${escapeHtml(order.rawCustomerData || '')}
+                </div>
+                
+                ${order.packedPackageImage ? `
+                  <img src="${order.packedPackageImage}" style="width: 100%; height: 130px; object-fit: contain; border-radius: 8px; border: 1px solid #cbd5e1; background: #fafafa;">
+                ` : '<div style="font-size: 10px; color: #94a3b8; font-style: italic; padding: 4px 0;">Sin foto de paquete registrada</div>'}
               </div>
             `).join('')}
           </div>
         </div>
       `;
 
-      document.body.className = "printing-report";
+      // Cargar en el área de impresión nativa y disparar la ventana de PDF
+      const printWrapper = document.getElementById('print-area-wrapper');
+      printWrapper.innerHTML = reportHtml;
+
       window.print();
 
+      // Restaurar título del documento original
       setTimeout(() => {
-        document.body.className = "";
-        document.title = previousTitle;
+        document.title = previousDocTitle;
       }, 1000);
 
+      // Confirmar limpieza definitiva en Firebase
       setTimeout(async () => {
-        const confirmDelete = confirm(`Se preparó el reporte PDF con fecha ${dateString}.\n\n¿Deseas eliminar definitivamente estos ${dispatchedOrders.length} pedidos empacados de la base de datos?`);
+        const confirmDelete = confirm(`Se ha generado el PDF con fecha ${dateString}.\n\n¿Deseas eliminar definitivamente estos ${completedOrders.length} pedidos despachados de la base de datos?`);
         if (confirmDelete) {
           try {
-            for (const order of dispatchedOrders) {
-              await deleteDoc(doc(db, "orders", order.id));
+            for (const order of completedOrders) {
+              if (window.deleteOrderFromCloud) {
+                await window.deleteOrderFromCloud(order.id);
+              }
             }
-          } catch (e) {
-            alert("Error al limpiar pedidos: " + e.message);
+            const remainingOrders = orders.filter(o => o.status !== 'packed' && o.status !== 'shipped');
+            if (window.saveOrders) {
+              window.saveOrders(remainingOrders);
+            }
+            renderOrders();
+            updatePendingCounter();
+            updateCourierExportCounters();
+            showToast(`✅ Se limpiaron ${completedOrders.length} pedidos de la base de datos.`);
+          } catch (err) {
+            console.error("Error al limpiar despachados:", err);
+            showToast('⚠️ Error al limpiar algunos pedidos en la nube');
           }
         }
       }, 1500);
-    };
+    }
+
+    function extractCustomerName(rawText) {
+      if (!rawText) return 'CLIENTE';
+      const lines = rawText.split('\n');
+      for (let line of lines) {
+        if (/nombre\s*:/i.test(line)) {
+          return line.replace(/nombre\s*:/i, '').trim();
+        }
+      }
+      return lines[0].trim();
+    }
+
+    function sanitizeCustomerData(rawText) {
+      if (!rawText) return '';
+      const lines = rawText.split('\n');
+      const filtered = [];
+      for (let line of lines) {
+        const trimmed = line.trim();
+        if (/^(?:📍\s*)?destino\s*:?$/i.test(trimmed)) {
+          continue;
+        }
+        const cleaned = trimmed.replace(/^(?:📍\s*)?destino\s*[:\-\.]\s*/i, '');
+        if (cleaned.length > 0) {
+          filtered.push(cleaned);
+        }
+      }
+      return filtered.join('\n');
+    }
+
+    function getOfficialLogoSvg() {
+      return `
+        <div style="display: flex; align-items: center; justify-content: flex-end; max-width: 145px; height: 38px; position: relative;">
+          <img src="logo.png" alt="Carros Escala Perú" style="display: none; max-height: 34px; max-width: 140px; object-fit: contain;" onload="this.style.display='block'; if(this.nextElementSibling) this.nextElementSibling.style.display='none';" />
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 0.88; text-align: right;">
+              <span style="font-family: 'Impact', 'Arial Black', 'Montserrat', sans-serif; font-style: italic; font-weight: 900; font-size: 11px; letter-spacing: -0.4px; color: #000000; text-transform: uppercase;">CARROS ESCALA</span>
+              <span style="font-family: 'Impact', 'Arial Black', 'Montserrat', sans-serif; font-style: italic; font-weight: 900; font-size: 18px; color: #E50914; letter-spacing: 0.6px; margin-top: -1px;">PERU</span>
+            </div>
+
+            <svg width="55" height="34" viewBox="0 0 130 75" fill="none" style="display: block; overflow: visible; margin-left: 2px;">
+              <path d="M 45 15 C 65 14, 80 15, 92 16" stroke="#000000" stroke-width="3" stroke-linecap="round" />
+              <path d="M 28 24 C 55 23, 76 24, 88 25 C 99 26, 105 32, 112 43 C 114 46, 118 48, 122 48" stroke="#000000" stroke-width="3.6" stroke-linecap="round" />
+              <path d="M 112 40 C 117 38, 124 39, 124 43 C 124 47, 116 48, 111 44 Z" fill="#000000" />
+              <path d="M 94 56 C 108 55, 118 57, 117 62 C 112 65, 99 64, 94 56 Z" fill="#000000" />
+              <path d="M 80 63 C 94 63, 103 66, 98 70 C 89 71, 81 67, 80 63 Z" fill="#000000" />
+              <path d="M 122 48 C 125 54, 125 64, 124 71 C 123 75, 120 76, 113 76 L 15 76" stroke="#000000" stroke-width="4.2" stroke-linecap="round" />
+              <path d="M 2 70 L 98 70" stroke="#000000" stroke-width="3" stroke-linecap="round" />
+            </svg>
+          </div>
+        </div>
+      `;
+    }
+
+    // GENERAR RÓTULO SHALOM: 8 por hoja, sin palabra DESTINO y con ID en vez de CLIENTE
+    function generateSingleShalomLabelHtml(order) {
+      const cleanData = sanitizeCustomerData(order.rawCustomerData);
+
+      return `
+        <div class="print-label-item">
+          <div class="print-box-bordered">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 2px;">
+              <div style="display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 10px; color: #000000; text-transform: uppercase; letter-spacing: -0.2px;">
+                <span>📦 DATOS DEL DESTINATARIO</span>
+              </div>
+              ${getOfficialLogoSvg()}
+            </div>
+
+            <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 1px;">
+              <div class="customer-data-text">${escapeHtml(cleanData)}</div>
+            </div>
+          </div>
+
+          <div class="print-footer-info">
+            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ID: <span style="font-weight: 700; color: #1e293b;">${escapeHtml(order.id)}</span>
+            </div>
+            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              PRODUCTO: <span style="font-weight: 700; color: #1e293b;">${escapeHtml(order.productDesc)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function generateSingleOlvaCaptureCardHtml(order) {
+      const clientName = extractCustomerName(order.rawCustomerData);
+
+      return `
+        <div class="print-label-item">
+          <div class="print-olva-capture-card">
+            <div class="print-olva-header">
+              <span style="color: #b45309; font-weight: 900;">OLVA • ID: ${order.id}</span>
+              <span style="max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #334155;">
+                ${escapeHtml(clientName)}
+              </span>
+            </div>
+
+            <div class="print-olva-image-wrapper">
+              <img src="${order.olvaOfficialLabel}" alt="Rótulo Olva ${order.id}">
+            </div>
+
+            <div style="font-size: 9px; font-weight: 800; color: #0f172a; padding: 2px 4px; border-top: 1px dashed #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between;">
+              <span>ARTÍCULO: ${escapeHtml(order.productDesc)}</span>
+              <span style="color: #64748b;">✂️ CORTAR POR LA LÍNEA</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openPrintModal(courierName) {
+      const allOrders = getOrders();
+      let targetOrders = [];
+      if (courierName.toLowerCase() === 'shalom') {
+        targetOrders = allOrders.filter(o => (o.courier.toLowerCase() === 'shalom' || o.courier.toLowerCase() === 'motorizado') && o.status !== 'shipped');
+      } else {
+        targetOrders = allOrders.filter(o => o.courier.toLowerCase() === courierName.toLowerCase() && o.status !== 'shipped');
+      }
+
+      if (targetOrders.length === 0) {
+        showToast(`⚠️ No hay pedidos pendientes de ${courierName} / Motorizado para imprimir.`);
+        return;
+      }
+
+      document.getElementById('print-modal-icon').textContent = '🏷️';
+      document.getElementById('print-modal-icon').className = 'bg-rose-600 text-white p-2 rounded-xl text-lg font-black';
+      document.getElementById('print-modal-title').textContent = courierName.toLowerCase() === 'shalom' ? 'Rótulos SHALOM & MOTORIZADO (8 por Hoja)' : `Rótulos - ${courierName.toUpperCase()}`;
+      document.getElementById('print-modal-desc').textContent = 'Distribución optimizada: 8 rótulos por página (2x4), rectángulo ajustado sin espacios vacíos.';
+      document.getElementById('print-modal-summary').textContent = `${targetOrders.length} pedido(s) listos`;
+
+      const labelsPerPage = 8;
+      const totalPages = Math.ceil(targetOrders.length / labelsPerPage);
+      let sheetsHtml = '';
+
+      for (let p = 0; p < totalPages; p++) {
+        const pageOrders = targetOrders.slice(p * labelsPerPage, (p + 1) * labelsPerPage);
+        let labelsHtml = pageOrders.map(order => generateSingleShalomLabelHtml(order)).join('');
+
+        const remainder = labelsPerPage - pageOrders.length;
+        for (let r = 0; r < remainder; r++) {
+          labelsHtml += `<div class="print-label-item" style="visibility: hidden;"></div>`;
+        }
+
+        sheetsHtml += `
+          <div class="a4-print-sheet shadow-md mb-6 border border-slate-300">
+            ${labelsHtml}
+          </div>
+        `;
+      }
+
+      document.getElementById('print-preview-content').innerHTML = sheetsHtml;
+      document.getElementById('print-area-wrapper').innerHTML = sheetsHtml;
+
+      const modal = document.getElementById('print-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function openOlvaBatchPrintModal() {
+      const allOrders = getOrders();
+      const olvaOrders = allOrders.filter(o => o.courier === 'Olva' && o.status !== 'shipped');
+      const readyOrders = olvaOrders.filter(o => Boolean(o.olvaOfficialLabel));
+
+      if (readyOrders.length === 0) {
+        showToast('⚠️ No hay rótulos de Olva adjuntados con Ctrl+V aún.');
+        return;
+      }
+
+      document.getElementById('print-modal-icon').textContent = '🖨️';
+      document.getElementById('print-modal-icon').className = 'bg-amber-500 text-slate-950 p-2 rounded-xl text-lg font-black';
+      document.getElementById('print-modal-title').textContent = 'Rótulos Oficiales OLVA (6 por Hoja A4)';
+      document.getElementById('print-modal-desc').textContent = 'Organiza todas las capturas de Olva pegadas en cuadrícula de 6 por hoja con líneas de corte.';
+      document.getElementById('print-modal-summary').textContent = `${readyOrders.length} rótulo(s) de Olva listos`;
+
+      const labelsPerPage = 6;
+      const totalPages = Math.ceil(readyOrders.length / labelsPerPage);
+      let sheetsHtml = '';
+
+      for (let p = 0; p < totalPages; p++) {
+        const pageOrders = readyOrders.slice(p * labelsPerPage, (p + 1) * labelsPerPage);
+        let labelsHtml = pageOrders.map(order => generateSingleOlvaCaptureCardHtml(order)).join('');
+
+        const remainder = labelsPerPage - pageOrders.length;
+        for (let r = 0; r < remainder; r++) {
+          labelsHtml += `<div class="print-label-item" style="visibility: hidden;"></div>`;
+        }
+
+        sheetsHtml += `
+          <div class="a4-print-sheet shadow-md mb-6 border border-slate-300">
+            ${labelsHtml}
+          </div>
+        `;
+      }
+
+      document.getElementById('print-preview-content').innerHTML = sheetsHtml;
+      document.getElementById('print-area-wrapper').innerHTML = sheetsHtml;
+
+      const modal = document.getElementById('print-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePrintModal() {
+      const modal = document.getElementById('print-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function triggerDirectBrowserPrint() {
+      window.print();
+    }
+
+    function openImageModal(imgSrc) {
+      const modal = document.getElementById('image-modal');
+      const modalImg = document.getElementById('modal-image');
+      modalImg.src = imgSrc;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeImageModal() {
+      const modal = document.getElementById('image-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    let pendingDeletionOrderId = null;
+
+    function promptDeleteOrder(orderId) {
+      pendingDeletionOrderId = orderId;
+      const label = document.getElementById('delete-order-id-label');
+      if (label) label.textContent = orderId;
+
+      const modal = document.getElementById('delete-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+    }
+
+    function closeDeleteModal() {
+      pendingDeletionOrderId = null;
+      const modal = document.getElementById('delete-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    async function confirmDeleteOrderAction() {
+      if (!pendingDeletionOrderId) return;
+      const targetId = pendingDeletionOrderId;
+      closeDeleteModal();
+
+      if (window.deleteOrderFromCloud) {
+        await window.deleteOrderFromCloud(targetId);
+      }
+
+      const currentOrders = getOrders();
+      const updatedOrders = currentOrders.filter(o => o.id !== targetId);
+      if (window.saveOrders) {
+        window.saveOrders(updatedOrders);
+      }
+
+      renderOrders();
+      updatePendingCounter();
+      updateCourierExportCounters();
+      showToast(`🗑️ Pedido ${targetId} eliminado permanentemente`);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.textContent = msg;
+      toast.classList.add('toast-show');
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        setTimeout(() => toast.classList.remove('toast-show'), 300);
+      }, 2800);
+    }
+
+    function escapeHtml(string) {
+      if (!string) return '';
+      return String(string)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      generateNewOrderId();
+      updateCurrentDateString();
+      updatePendingCounter();
+      renderOrders();
+      updateCourierExportCounters();
+    });
   </script>
 </body>
 </html>
